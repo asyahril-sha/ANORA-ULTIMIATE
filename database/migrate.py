@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 async def create_registrations_table(db):
-    """Create registrations table"""
+    """Create registrations table with new fields"""
     await db.execute('''
         CREATE TABLE IF NOT EXISTS registrations (
             id TEXT PRIMARY KEY,
@@ -63,6 +63,20 @@ async def create_registrations_table(db):
             intimacy_cycle_count INTEGER DEFAULT 0,
             last_climax_time REAL,
             cooldown_until REAL,
+            
+            -- ===== NEW FIELDS FOR REALISM 9.9 =====
+            weighted_memory_score REAL DEFAULT 0.5,
+            weighted_memory_data TEXT DEFAULT '{}',
+            emotional_bias TEXT DEFAULT '{}',
+            secondary_emotion TEXT,
+            secondary_arousal INTEGER DEFAULT 0,
+            secondary_emotion_reason TEXT,
+            
+            -- Physical Sensation
+            physical_sensation TEXT DEFAULT 'biasa aja',
+            physical_hunger INTEGER DEFAULT 30,
+            physical_thirst INTEGER DEFAULT 30,
+            physical_temperature INTEGER DEFAULT 25,
             
             -- Metadata
             metadata TEXT DEFAULT '{}'
@@ -109,6 +123,8 @@ async def create_long_term_memory_table(db):
             content TEXT NOT NULL,
             importance REAL DEFAULT 0.5,
             timestamp REAL NOT NULL,
+            status TEXT,
+            emotional_tag TEXT,
             metadata TEXT DEFAULT '{}',
             FOREIGN KEY (registration_id) REFERENCES registrations(id) ON DELETE CASCADE
         )
@@ -122,7 +138,7 @@ async def create_long_term_memory_table(db):
 
 
 async def create_state_tracker_table(db):
-    """Create state_tracker table"""
+    """Create state_tracker table with new fields"""
     await db.execute('''
         CREATE TABLE IF NOT EXISTS state_tracker (
             registration_id TEXT PRIMARY KEY,
@@ -136,9 +152,11 @@ async def create_state_tracker_table(db):
             
             -- Clothing (hierarchy)
             clothing_bot_outer TEXT,
+            clothing_bot_outer_bottom TEXT,
             clothing_bot_inner_top TEXT,
             clothing_bot_inner_bottom TEXT,
             clothing_user_outer TEXT,
+            clothing_user_outer_bottom TEXT,
             clothing_user_inner_bottom TEXT,
             clothing_history TEXT,
             
@@ -148,6 +166,10 @@ async def create_state_tracker_table(db):
             mood_bot TEXT DEFAULT 'normal',
             emotion_user TEXT DEFAULT 'netral',
             arousal_user INTEGER DEFAULT 0,
+            
+            -- ===== NEW FIELDS FOR REALISM 9.9 =====
+            secondary_emotion TEXT,
+            secondary_arousal INTEGER DEFAULT 0,
             
             -- Family State (IPAR & PELAKOR)
             family_status TEXT,
@@ -172,6 +194,27 @@ async def create_state_tracker_table(db):
     await db.execute("CREATE INDEX IF NOT EXISTS idx_state_tracker_updated ON state_tracker(updated_at)")
     
     logger.info("✅ Table 'state_tracker' created")
+
+
+async def create_backups_table(db):
+    """Create backups table for backup history"""
+    await db.execute('''
+        CREATE TABLE IF NOT EXISTS backups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL,
+            size INTEGER,
+            created_at REAL NOT NULL,
+            type TEXT DEFAULT 'auto',
+            status TEXT DEFAULT 'completed',
+            metadata TEXT DEFAULT '{}'
+        )
+    ''')
+    
+    # Indexes
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_backups_created_at ON backups(created_at)")
+    await db.execute("CREATE INDEX IF NOT EXISTS idx_backups_type ON backups(type)")
+    
+    logger.info("✅ Table 'backups' created")
 
 
 async def create_indexes(db):
@@ -208,6 +251,17 @@ async def fix_missing_columns(db):
         'stamina_bot': "INTEGER DEFAULT 100",
         'stamina_user': "INTEGER DEFAULT 100",
         'bot_hijab': "BOOLEAN DEFAULT 0",
+        # NEW FIELDS
+        'weighted_memory_score': "REAL DEFAULT 0.5",
+        'weighted_memory_data': "TEXT DEFAULT '{}'",
+        'emotional_bias': "TEXT DEFAULT '{}'",
+        'secondary_emotion': "TEXT",
+        'secondary_arousal': "INTEGER DEFAULT 0",
+        'secondary_emotion_reason': "TEXT",
+        'physical_sensation': "TEXT DEFAULT 'biasa aja'",
+        'physical_hunger': "INTEGER DEFAULT 30",
+        'physical_thirst': "INTEGER DEFAULT 30",
+        'physical_temperature': "INTEGER DEFAULT 25",
     }
     
     added = 0
@@ -237,6 +291,11 @@ async def fix_missing_columns(db):
         'family_estimate_return': "TEXT",
         'time_override_history': "TEXT DEFAULT '[]'",
         'clothing_history': "TEXT",
+        # NEW FIELDS
+        'secondary_emotion': "TEXT",
+        'secondary_arousal': "INTEGER DEFAULT 0",
+        'clothing_bot_outer_bottom': "TEXT",
+        'clothing_user_outer_bottom': "TEXT",
     }
     
     added = 0
@@ -258,7 +317,7 @@ async def fix_missing_columns(db):
 async def run_migrations():
     """Run all database migrations"""
     logger.info("=" * 60)
-    logger.info("🚀 AMORIA - Database Migration")
+    logger.info("🚀 AMORIA - Database Migration 9.9")
     logger.info("=" * 60)
     
     try:
@@ -270,6 +329,7 @@ async def run_migrations():
         await create_working_memory_table(db)
         await create_long_term_memory_table(db)
         await create_state_tracker_table(db)
+        await create_backups_table(db)
         await create_indexes(db)
         
         # Fix missing columns
@@ -289,7 +349,7 @@ async def run_migrations():
         
         logger.info("")
         logger.info("=" * 60)
-        logger.info("✅ AMORIA Database Migration Complete!")
+        logger.info("✅ AMORIA Database Migration 9.9 Complete!")
         logger.info("=" * 60)
         
         return True
@@ -323,7 +383,7 @@ if __name__ == "__main__":
     success = run_migration_sync()
     
     if success:
-        print("\n✅ Database ready for AMORIA!")
+        print("\n✅ Database ready for AMORIA 9.9!")
         sys.exit(0)
     else:
         print("\n❌ Database migration failed!")
