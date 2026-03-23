@@ -1,0 +1,143 @@
+amoria/
+│
+├── main.py                          # Entry point utama
+├── config.py                        # Konfigurasi utama
+├── requirements.txt                 # Dependencies
+├── .env.example                     # Template environment
+├── docker-compose.yml               # Docker compose
+├── railway.json                     # Railway deployment
+├── README.md                        # Dokumentasi
+│
+├── core/                            # Core AI systems
+│   ├── __init__.py
+│   ├── ai_engine.py                 # AI Engine utama (100% AI generate)
+│   ├── prompt_builder.py            # Prompt builder dinamis
+│   ├── context_analyzer.py          # Analisis konteks 1000 chat
+│   ├── intent_analyzer.py           # Analisis intent user
+│   └── name_detector.py             # Deteksi nama
+│
+├── identity/                        # Multi-Identity System
+│   ├── __init__.py
+│   ├── registration.py              # Model registrasi
+│   ├── manager.py                   # Registrasi manager
+│   ├── user_identity.py             # User identity per role
+│   └── bot_identity.py              # Bot identity per role
+│
+├── role/                            # Character behaviors (9 role)
+│   ├── __init__.py
+│   ├── base.py                      # Base class
+│   ├── ipar.py                      # IPAR (dengan family awareness)
+│   ├── pelakor.py                   # PELAKOR (tracking istri)
+│   ├── istri_orang.py               # ISTRI ORANG (tracking suami)
+│   ├── janda.py                     # JANDA
+│   ├── pdkt.py                      # PDKT
+│   ├── sepupu.py                    # SEPUPU
+│   ├── teman_kantor.py              # TEMAN KANTOR
+│   ├── teman_sma.py                 # TEMAN SMA
+│   └── mantan.py                    # MANTAN
+│
+├── memory/                          # Memory systems
+│   ├── __init__.py
+│   ├── working_memory.py            # 1000 chat sliding window
+│   ├── long_term_memory.py          # Milestone, janji, rencana
+│   ├── emotional_memory.py          # Ingatan emosional
+│   ├── state_persistence.py         # State persistence
+│   └── flashback.py                 # Flashback system
+│
+├── intimacy/                        # Intimacy system
+│   ├── __init__.py
+│   ├── leveling.py                  # Level berdasarkan total chat
+│   ├── cycle.py                     # Siklus 10→11→12→10
+│   ├── clothing.py                  # Clothing hierarchy & history
+│   └── stamina.py                   # Stamina tracking
+│
+├── tracking/                        # Tracking systems
+│   ├── __init__.py
+│   ├── family.py                    # Tracking istri (IPAR & PELAKOR)
+│   ├── promises.py                  # Tracking janji
+│   ├── plans.py                     # Tracking rencana
+│   └── preferences.py               # Learning preferensi
+│
+├── dynamics/                        # Dynamic systems
+│   ├── __init__.py
+│   ├── emotional_flow.py            # Arousal 0-100, gradual
+│   ├── spatial_awareness.py         # Paham posisi dari narasi
+│   ├── location.py                  # Location system
+│   ├── position.py                  # Position system
+│   ├── time_awareness.py            # Time awareness (real time + override)
+│   └── mood.py                      # Mood dinamis setelah aftercare
+│
+├── command/                         # Telegram commands
+│   ├── __init__.py
+│   ├── start.py                     # /start
+│   ├── sessions.py                  # /sessions, /character, /close, /end
+│   ├── status.py                    # /status, /progress
+│   ├── character.py                 # /character, /character-list, dll
+│   ├── ex_fwb.py                    # /ex-list, /fwb-request, dll
+│   ├── hts.py                       # /hts-list, /hts-[nomor]
+│   ├── threesome.py                 # /threesome, /threesome-list, dll
+│   ├── public.py                    # /explore, /locations, /risk, /go
+│   ├── memory.py                    # /memory, /flashback
+│   ├── ranking.py                   # /top-hts, /my-climax, /climax-history
+│   └── admin.py                     # /stats, /db-stats, /backup, /recover, /debug
+│
+├── bot/                             # Telegram bot handlers
+│   ├── __init__.py
+│   ├── application.py               # Application factory
+│   ├── handlers.py                  # Main handlers
+│   ├── callbacks.py                 # Callback handlers
+│   └── webhook.py                   # Webhook handler
+│
+├── database/                        # Database
+│   ├── __init__.py
+│   ├── connection.py                # Koneksi database
+│   ├── models.py                    # Models (registrasi, memory, state)
+│   ├── repository.py                # Repository pattern
+│   └── migrate.py                   # Migrasi otomatis
+│
+├── backup/                          # Backup system
+│   ├── __init__.py
+│   ├── automated.py                 # Auto backup
+│   ├── recovery.py                  # Recovery manager
+│   └── verify.py                    # Backup verifier
+│
+├── monitoring/                      # Monitoring
+│   ├── __init__.py
+│   ├── metrics.py                   # Metrics collector
+│   └── dashboard.py                 # Dashboard generator
+│
+├── references/                      # Referensi (opsional, bukan template)
+│   ├── __init__.py
+│   ├── artists.py                   # Referensi artis
+│   ├── positions.py                 # Referensi posisi
+│   ├── areas.py                     # Referensi area
+│   ├── climax.py                    # Referensi climax
+│   ├── gesture_db.py                # Referensi gesture
+│   └── role_config.py               # Referensi role
+│
+├── utils/                           # Utilities
+│   ├── __init__.py
+│   ├── logger.py                    # Logging
+│   ├── exceptions.py                # Custom exceptions
+│   ├── helpers.py                   # Helper functions
+│   └── performance.py               # Performance monitoring
+│
+├── tests/                           # Unit tests
+│   ├── __init__.py
+│   ├── test_all.py                  # Test runner
+│   ├── test_ai_engine.py            # Test AI engine
+│   ├── test_memory.py               # Test memory systems
+│   ├── test_intimacy.py             # Test intimacy system
+│   └── simulate.py                  # Conversation simulation
+│
+├── data/                            # Data directory (auto-created)
+│   ├── amoria.db                    # Database file
+│   ├── logs/                        # Log files
+│   ├── sessions/                    # Session storage
+│   ├── memory/                      # Memory storage
+│   └── backups/                     # Backup files
+│
+├── run_bot.py                       # Local runner
+├── run_deploy.py                    # Deployment runner
+├── database_migrate.py              # Database migration script
+└── quick_start.py                   # Quick start script
