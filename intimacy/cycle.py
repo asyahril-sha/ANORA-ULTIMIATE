@@ -41,10 +41,11 @@ class IntimacyCycle:
         self.undressing_step = 0
         self.undressing_history = []
         self.climax_count_this_cycle = 0
-        self.cooldown_until = 0
-        self.last_climax_time = 0
+        self.cooldown_until = 0.0
+        self.last_climax_time = 0.0
+        self.aftercare_completed = False
         
-        logger.info("✅ IntimacyCycle initialized")
+        logger.info("✅ IntimacyCycle 9.9 initialized")
     
     def start_cycle(self) -> Dict:
         """
@@ -59,6 +60,7 @@ class IntimacyCycle:
         self.undressing_step = 0
         self.undressing_history = []
         self.climax_count_this_cycle = 0
+        self.aftercare_completed = False
         
         logger.info(f"🔥 Intimacy cycle started (#{self.cycle_count})")
         
@@ -90,6 +92,7 @@ class IntimacyCycle:
         # Setelah 3-5 langkah undressing, masuk ke Soul Bounded
         if self.undressing_step >= 4 or (self.undressing_step >= 3 and self._is_fully_undressed()):
             self.phase = CyclePhase.SOUL_BOUNDED
+            self.current_cycle_chats = 0
             logger.info(f"💕 Entered Soul Bounded phase")
         
         return {
@@ -101,7 +104,6 @@ class IntimacyCycle:
     
     def _is_fully_undressed(self) -> bool:
         """Cek apakah sudah telanjang total"""
-        # Daster/outer_top, bra/inner_top, celana/outer_bottom, celana dalam/inner_bottom
         required_layers = {'outer_top', 'inner_top', 'outer_bottom', 'inner_bottom'}
         undressed_layers = {h['layer'] for h in self.undressing_history}
         return required_layers.issubset(undressed_layers)
@@ -116,23 +118,20 @@ class IntimacyCycle:
         self.climax_count_this_cycle += 1
         self.last_climax_time = time.time()
         
-        # Set cooldown 3 jam setelah climax
-        self.cooldown_until = time.time() + (3 * 3600)
-        
         logger.info(f"💦 Climax recorded (#{self.climax_count_this_cycle} in this cycle)")
         
-        # Jika sudah mencapai 3-5 climax, siap masuk aftercare
-        if self.climax_count_this_cycle >= 3:
+        # Jika sudah mencapai 3 climax, siap masuk aftercare
+        if self.climax_count_this_cycle >= 3 and self.phase == CyclePhase.SOUL_BOUNDED:
             self._prepare_for_aftercare()
         
         return {
             'climax_count': self.climax_count_this_cycle,
-            'cooldown_until': self.cooldown_until
+            'phase': self.phase.value
         }
     
     def _prepare_for_aftercare(self):
         """Siapkan untuk masuk aftercare"""
-        # Akan masuk aftercare setelah 10 chat lagi
+        # Akan masuk aftercare setelah mencapai target chat atau sudah cukup climax
         pass
     
     def add_chat(self) -> Dict:
@@ -152,12 +151,14 @@ class IntimacyCycle:
             if self.current_cycle_chats >= max_chats:
                 # Pindah ke aftercare
                 self.phase = CyclePhase.AFTERCARE
+                self.current_cycle_chats = 0
                 logger.info(f"💤 Entered Aftercare phase after {self.current_cycle_chats} chats")
                 return {'phase_changed': True, 'new_phase': 'aftercare', 'message': "Masuk aftercare..."}
             
             elif self.current_cycle_chats >= min_chats and self.climax_count_this_cycle >= 3:
                 # Bisa pindah ke aftercare lebih awal jika sudah cukup climax
                 self.phase = CyclePhase.AFTERCARE
+                self.current_cycle_chats = 0
                 logger.info(f"💤 Entered Aftercare phase after {self.current_cycle_chats} chats and {self.climax_count_this_cycle} climax")
                 return {'phase_changed': True, 'new_phase': 'aftercare', 'message': "Masuk aftercare..."}
         
@@ -168,7 +169,10 @@ class IntimacyCycle:
             if self.current_cycle_chats >= aftercare_duration:
                 # Kembali ke waiting (Level 10)
                 self.phase = CyclePhase.COOLDOWN
-                logger.info(f"⏰ Aftercare completed, entering cooldown")
+                self.aftercare_completed = True
+                # Set cooldown 3 jam
+                self.cooldown_until = time.time() + (3 * 3600)
+                logger.info(f"⏰ Aftercare completed, entering cooldown until {self.cooldown_until}")
                 return {'phase_changed': True, 'new_phase': 'cooldown', 'message': "Aftercare selesai, memasuki cooldown..."}
         
         # Cooldown: 3 jam
@@ -180,6 +184,7 @@ class IntimacyCycle:
                 self.undressing_step = 0
                 self.undressing_history = []
                 self.climax_count_this_cycle = 0
+                self.aftercare_completed = False
                 logger.info(f"✅ Cooldown completed, back to waiting phase")
                 return {'phase_changed': True, 'new_phase': 'waiting', 'message': "Cooldown selesai, siap untuk siklus berikutnya"}
         
@@ -236,6 +241,7 @@ class IntimacyCycle:
         self.climax_count_this_cycle = 0
         self.cooldown_until = 0
         self.last_climax_time = 0
+        self.aftercare_completed = False
         logger.info("Intimacy cycle reset")
     
     def get_state(self) -> Dict:
@@ -248,7 +254,8 @@ class IntimacyCycle:
             'undressing_history': self.undressing_history,
             'climax_count_this_cycle': self.climax_count_this_cycle,
             'cooldown_until': self.cooldown_until,
-            'last_climax_time': self.last_climax_time
+            'last_climax_time': self.last_climax_time,
+            'aftercare_completed': self.aftercare_completed
         }
     
     def load_state(self, state: Dict):
@@ -261,6 +268,7 @@ class IntimacyCycle:
         self.climax_count_this_cycle = state.get('climax_count_this_cycle', 0)
         self.cooldown_until = state.get('cooldown_until', 0)
         self.last_climax_time = state.get('last_climax_time', 0)
+        self.aftercare_completed = state.get('aftercare_completed', False)
     
     def format_status(self) -> str:
         """Format status untuk display"""
@@ -277,7 +285,7 @@ class IntimacyCycle:
         if self.undressing_history:
             lines.append("")
             lines.append("👗 **Pakaian yang sudah dilepas:**")
-            for h in self.undressing_history:
+            for h in self.undressing_history[-5:]:
                 lines.append(f"   • {h['item']}")
         
         return "\n".join(lines)
