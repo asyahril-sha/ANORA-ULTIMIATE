@@ -1,4 +1,4 @@
-# add_time_data_now.py
+# fix_time_data.py
 import sqlite3
 from pathlib import Path
 
@@ -27,8 +27,8 @@ columns = [col[1] for col in cursor.fetchall()]
 print(f"\nFinal columns: {columns}")
 
 if 'time_data' in columns:
-    print("\n✅ SUCCESS! time_data column is now in state_tracker")
+    print("\n✅ SUCCESS! Bot ready to run")
 else:
-    print("\n❌ FAILED! time_data column still missing")
+    print("\n❌ FAILED!")
 
 conn.close()
