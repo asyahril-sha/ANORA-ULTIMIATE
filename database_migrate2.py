@@ -1,115 +1,41 @@
-```python
-# fix_missing_columns.py
-# -*- coding: utf-8 -*-
-"""
-=============================================================================
-AMORIA - FIX MISSING COLUMNS (SAFE MIGRATION TOOL)
-=============================================================================
-
-Tujuan:
-- Menambahkan kolom yang belum ada di schema lama
-- Tanpa reset database
-- Aman untuk production (idempotent)
-
-Usage:
-    python fix_missing_columns.py
-"""
-
+# quick_fix.py
 import asyncio
-import logging
+from database.connection import init_db, get_db, close_db
 
-from database.postgres_connection import get_db
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-
-async def fix_state_tracker_columns(db):
-    """Fix missing columns di state_tracker"""
-
-    logger.info("🔧 Checking & fixing state_tracker columns...")
-
-    await db.execute("""
-        DO $$
-        BEGIN
-            -- BOT CLOTHING
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_name = 'state_tracker' 
-                AND column_name = 'clothing_bot_outer_bottom'
-            ) THEN
-                ALTER TABLE state_tracker ADD COLUMN clothing_bot_outer_bottom TEXT;
-            END IF;
-
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_name = 'state_tracker' 
-                AND column_name = 'clothing_bot_inner_top'
-            ) THEN
-                ALTER TABLE state_tracker ADD COLUMN clothing_bot_inner_top TEXT;
-            END IF;
-
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_name = 'state_tracker' 
-                AND column_name = 'clothing_bot_inner_bottom'
-            ) THEN
-                ALTER TABLE state_tracker ADD COLUMN clothing_bot_inner_bottom TEXT;
-            END IF;
-
-            -- USER CLOTHING
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_name = 'state_tracker' 
-                AND column_name = 'clothing_user_outer'
-            ) THEN
-                ALTER TABLE state_tracker ADD COLUMN clothing_user_outer TEXT;
-            END IF;
-
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_name = 'state_tracker' 
-                AND column_name = 'clothing_user_outer_bottom'
-            ) THEN
-                ALTER TABLE state_tracker ADD COLUMN clothing_user_outer_bottom TEXT;
-            END IF;
-
-            IF NOT EXISTS (
-                SELECT 1 FROM information_schema.columns 
-                WHERE table_name = 'state_tracker' 
-                AND column_name = 'clothing_user_inner_bottom'
-            ) THEN
-                ALTER TABLE state_tracker ADD COLUMN clothing_user_inner_bottom TEXT;
-            END IF;
-
-        END $$;
-    """)
-
-    logger.info("✅ state_tracker columns fixed")
-
-
-async def run_fix():
-    """Main runner"""
-    print("\n⚠ Ini akan memperbaiki schema database TANPA menghapus data")
-    confirm = input("Ketik 'FIX' untuk melanjutkan: ")
-
-    if confirm != "FIX":
-        print("❌ Dibatalkan")
-        return
-
+async def fix():
+    await init_db()
+    db = await get_db()
+    
+    # Add weighted_memory_score directly
     try:
-        db = await get_db()
-
-        # Fix columns
-        await fix_state_tracker_columns(db)
-
-        logger.info("🎉 ALL FIXES COMPLETED")
-
+        await db.execute("ALTER TABLE registrations ADD COLUMN weighted_memory_score REAL DEFAULT 0.5")
+        print("✅ Added weighted_memory_score")
     except Exception as e:
-        logger.exception("❌ FIX FAILED")
-        raise
+        print(f"⚠️ {e}")
+    
+    # Add other missing columns
+    columns_to_add = {
+        "weighted_memory_data": "TEXT DEFAULT '{}'",
+        "emotional_bias": "TEXT DEFAULT '{}'",
+        "stamina_bot": "INTEGER DEFAULT 100",
+        "stamina_user": "INTEGER DEFAULT 100",
+        "physical_sensation": "TEXT DEFAULT 'biasa aja'",
+        "physical_hunger": "INTEGER DEFAULT 30",
+        "physical_thirst": "INTEGER DEFAULT 30",
+        "secondary_emotion": "TEXT",
+        "secondary_arousal": "INTEGER DEFAULT 0",
+        "in_intimacy_cycle": "BOOLEAN DEFAULT 0",
+    }
+    
+    for col, defn in columns_to_add.items():
+        try:
+            await db.execute(f"ALTER TABLE registrations ADD COLUMN {col} {defn}")
+            print(f"✅ Added {col}")
+        except Exception as e:
+            print(f"⚠️ {col}: {e}")
+    
+    await db.commit()
+    await close_db()
+    print("✅ Done!")
 
-
-if __name__ == "__main__":
-    asyncio.run(run_fix())
-```
+asyncio.run(fix())
