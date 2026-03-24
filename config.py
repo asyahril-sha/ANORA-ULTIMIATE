@@ -52,14 +52,14 @@ class AISettings(BaseSettings):
     model_config = ConfigDict(env_prefix="AI_", extra="ignore")
     
     temperature: float = Field(0.95, alias="AI_TEMPERATURE")
-    max_tokens: int = Field(4000, alias="AI_MAX_TOKENS")
+    max_tokens: int = Field(2000, alias="AI_MAX_TOKENS")
     timeout: int = Field(45, alias="AI_TIMEOUT")
     model: str = Field("deepseek-chat", alias="AI_MODEL")
     
-    min_response_length: int = Field(1000, alias="MIN_RESPONSE_LENGTH")
-    max_response_length: int = Field(4000, alias="MAX_RESPONSE_LENGTH")
-    min_sentences: int = Field(4, alias="MIN_SENTENCES")
-    max_sentences: int = Field(12, alias="MAX_SENTENCES")
+    min_response_length: int = Field(300, alias="MIN_RESPONSE_LENGTH")
+    max_response_length: int = Field(2000), alias="MAX_RESPONSE_LENGTH")
+    min_sentences: int = Field(2, alias="MIN_SENTENCES")
+    max_sentences: int = Field(8, alias="MAX_SENTENCES")
     
     @field_validator('temperature')
     @classmethod
