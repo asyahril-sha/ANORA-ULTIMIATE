@@ -339,17 +339,41 @@ class TimeState:
     start: str = "08:00"
     overrides: List[Dict] = field(default_factory=list)
     last_update: float = field(default_factory=lambda: time.time())
-    
-    def advance(self, minutes: int):
+
+    # =========================
+    # ADVANCE TIME (SMART)
+    # =========================
+    def advance(self, minutes: int = None):
+        now = time.time()
+
+        # AUTO ADVANCE berdasarkan jeda chat
+        if minutes is None:
+            delta = now - self.last_update
+
+            if delta < 10:
+                minutes = 1
+            elif delta < 60:
+                minutes = 3
+            elif delta < 300:
+                minutes = 5
+            else:
+                minutes = 10
+
         hour, minute = map(int, self.current.split(':'))
         total_minutes = hour * 60 + minute + minutes
+
         new_hour = (total_minutes // 60) % 24
         new_minute = total_minutes % 60
+
         self.current = f"{new_hour:02d}:{new_minute:02d}"
-        self.last_update = time.time()
-    
+        self.last_update = now
+
+    # =========================
+    # OVERRIDE (USER FORCE TIME)
+    # =========================
     def override(self, new_time: str, reason: str = ""):
         old_time = self.current
+
         self.current = new_time
         self.overrides.append({
             'timestamp': time.time(),
@@ -357,10 +381,46 @@ class TimeState:
             'new_time': new_time,
             'reason': reason
         })
+
         self.last_update = time.time()
-    
+
+    # =========================
+    # DETECT TIME FROM TEXT
+    # =========================
+    def detect_and_apply(self, text: str):
+        text = text.lower()
+
+        # kata waktu
+        mapping = {
+            "subuh": "04:00",
+            "pagi": "08:00",
+            "siang": "12:00",
+            "sore": "17:00",
+            "malam": "20:00",
+            "tengah malam": "00:00"
+        }
+
+        for key, val in mapping.items():
+            if key in text:
+                self.override(val, f"user said {key}")
+                return True
+
+        # detect jam format 02:00 / 2:00
+        match = re.search(r'(\d{1,2})[:.](\d{2})', text)
+        if match:
+            hour = int(match.group(1)) % 24
+            minute = int(match.group(2))
+            self.override(f"{hour:02d}:{minute:02d}", "user explicit time")
+            return True
+
+        return False
+
+    # =========================
+    # TIME CATEGORY
+    # =========================
     def get_time_of_day(self) -> str:
         hour = int(self.current.split(':')[0])
+
         if 5 <= hour < 11:
             return "pagi"
         elif 11 <= hour < 15:
@@ -370,7 +430,29 @@ class TimeState:
         elif 18 <= hour < 22:
             return "malam"
         return "tengah malam"
-    
+
+    # =========================
+    # FEELING (INI YANG BIKIN HIDUP)
+    # =========================
+    def get_time_feel(self) -> str:
+        hour = int(self.current.split(':')[0])
+
+        if 0 <= hour < 5:
+            return "sunyi, dingin, ngantuk berat"
+        elif 5 <= hour < 9:
+            return "pagi segar, masih santai"
+        elif 9 <= hour < 12:
+            return "fokus, energi naik"
+        elif 12 <= hour < 15:
+            return "sedikit lelah, butuh istirahat"
+        elif 15 <= hour < 18:
+            return "santai sore"
+        elif 18 <= hour < 22:
+            return "hangat, nyaman"
+        else:
+            return "larut malam, mulai lelah"
+
+    # =========================
     def to_dict(self) -> Dict:
         return {
             'current': self.current,
