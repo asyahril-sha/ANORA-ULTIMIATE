@@ -1,36 +1,23 @@
 # command/status.py
 # -*- coding: utf-8 -*-
 """
-=============================================================================
 AMORIA - Virtual Human dengan Jiwa
-Commands: /status, /progress - Status Hubungan & Progress Leveling
-Target Realism 9.9/10
-=============================================================================
+Commands: /status, /progress
 """
 
 import logging
-from typing import Optional
-
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from database.models import CharacterRole
 from identity.manager import IdentityManager
 from intimacy.leveling import LevelingSystem
 from intimacy.stamina import StaminaSystem
-from intimacy.clothing import ClothingSystem
-from dynamics.mood import MoodSystem
-from config import settings
 
 logger = logging.getLogger(__name__)
 
 
 async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk /status - Lihat status hubungan saat ini
-    """
-    user_id = update.effective_user.id
-    
+    """Handler untuk /status - Lihat status hubungan saat ini"""
     current_reg = context.user_data.get('current_registration')
     if not current_reg:
         await update.message.reply_text(
@@ -41,22 +28,14 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
     
     registration_id = current_reg.get('id')
-    role = current_reg.get('role')
-    bot_name = current_reg.get('bot_name')
-    user_name = current_reg.get('user_name')
-    
     identity_manager = IdentityManager()
-    
-    # Dapatkan karakter dan state
     character = await identity_manager.get_character(registration_id)
-    state = await identity_manager.get_character_state(registration_id)
     
-    if not character or not state:
-        await update.message.reply_text(
-            "❌ Gagal memuat data karakter.",
-            parse_mode='HTML'
-        )
+    if not character:
+        await update.message.reply_text("❌ Gagal memuat data karakter.", parse_mode='HTML')
         return
+    
+    state = await identity_manager.get_character_state(registration_id)
     
     # Leveling system
     leveling = LevelingSystem()
@@ -64,38 +43,70 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Stamina system
     stamina = StaminaSystem()
-    stamina.bot_stamina.current = character.stamina_bot
-    stamina.user_stamina.current = character.stamina_user
+    stamina.bot_stamina.current = character.bot.stamina
+    stamina.user_stamina.current = character.user.stamina
     stamina.check_recovery()
     
-    # Clothing
-    clothing = state.get('clothing_state') if state else None
+    # Update stamina back to character
+    character.bot.stamina = stamina.bot_stamina.current
+    character.user.stamina = stamina.user_stamina.current
     
-    # Mood
-    mood = state.get('mood_bot', 'normal') if state else 'normal'
+    # Level name
+    level_names = {
+        1: "Malu-malu", 2: "Mulai terbuka", 3: "Goda-godaan",
+        4: "Dekat", 5: "Sayang", 6: "PACAR/PDKT",
+        7: "Nyaman", 8: "Eksplorasi", 9: "Bergairah",
+        10: "Passionate", 11: "Soul Bounded", 12: "Aftercare"
+    }
+    level_name = level_names.get(character.level, f"Level {character.level}")
     
-    # Format response
-    response = _format_status_response(
-        character=character,
-        state=state,
-        level_info=level_info,
-        stamina=stamina,
-        clothing=clothing,
-        mood=mood,
-        bot_name=bot_name,
-        user_name=user_name
-    )
+    # Progress bar
+    bar = level_info.get_progress_bar(20)
+    
+    # Lokasi dari state
+    location = state.get('location_bot', 'ruang tamu') if state else 'ruang tamu'
+    
+    # AROUSAL dari character.bot, BUKAN dari state
+    arousal_bot = character.bot.arousal
+    emotion_bot = character.bot.emotion
+    mood_bot = character.bot.mood if hasattr(character.bot, 'mood') else 'normal'
+    
+    # Stamina bars
+    bot_stamina_bar = _stamina_bar(character.bot.stamina)
+    user_stamina_bar = _stamina_bar(character.user.stamina)
+    
+    response = f"""
+📊 **STATUS HUBUNGAN**
+
+👤 **{character.bot.name}** ({character.role.value.upper()})
+👥 **User:** {character.user.name}
+
+📈 **Level:** {character.level}/12 - {level_name}
+📊 Progress: {bar} {level_info.progress:.0f}%
+💬 Total Chat: {character.total_chats}
+💦 Total Climax: {character.bot.total_climax + character.user.total_climax}
+
+📍 **Lokasi:** {location}
+🎭 **Emosi Bot:** {emotion_bot} | Arousal: {arousal_bot}%
+🎭 **Mood Bot:** {mood_bot.upper()}
+
+💪 **Stamina:**
+• Bot: {bot_stamina_bar} {character.bot.stamina}%
+• User: {user_stamina_bar} {character.user.stamina}%
+"""
+    
+    # Tambah info siklus intim jika dalam siklus
+    if character.in_intimacy_cycle:
+        if character.level == 11:
+            response += f"\n\n🔥 **SOUL BOUNDED**\n• Siklus intim #{character.intimacy_cycle_count}\n• Progress: {level_info.progress:.0f}% ke Aftercare"
+        elif character.level == 12:
+            response += f"\n\n💤 **AFTERCARE**\n• Siklus intim #{character.intimacy_cycle_count}\n• Butuh kehangatan dan pelukan"
     
     await update.message.reply_text(response, parse_mode='HTML')
 
 
 async def progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk /progress - Lihat progress leveling (RAHASIA untuk user)
-    Menampilkan detail progress yang tidak diketahui bot
-    """
-    user_id = update.effective_user.id
-    
+    """Handler untuk /progress - Lihat progress leveling (RAHASIA untuk user)"""
     current_reg = context.user_data.get('current_registration')
     if not current_reg:
         await update.message.reply_text(
@@ -106,18 +117,11 @@ async def progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         return
     
     registration_id = current_reg.get('id')
-    bot_name = current_reg.get('bot_name')
-    
     identity_manager = IdentityManager()
-    
-    # Dapatkan karakter
     character = await identity_manager.get_character(registration_id)
     
     if not character:
-        await update.message.reply_text(
-            "❌ Gagal memuat data karakter.",
-            parse_mode='HTML'
-        )
+        await update.message.reply_text("❌ Gagal memuat data karakter.", parse_mode='HTML')
         return
     
     # Dapatkan working memory untuk weighted stats
@@ -134,114 +138,9 @@ async def progress_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     
     # Stamina system
     stamina = StaminaSystem()
-    stamina.bot_stamina.current = character.stamina_bot
-    stamina.user_stamina.current = character.stamina_user
+    stamina.bot_stamina.current = character.bot.stamina
+    stamina.user_stamina.current = character.user.stamina
     stamina.check_recovery()
-    
-    # Format response
-    response = _format_progress_response(
-        character=character,
-        level_info=level_info,
-        stamina=stamina,
-        bot_name=bot_name,
-        weighted_score=weighted_score
-    )
-    
-    await update.message.reply_text(response, parse_mode='HTML')
-
-
-def _format_status_response(
-    character,
-    state,
-    level_info,
-    stamina,
-    clothing,
-    mood: str,
-    bot_name: str,
-    user_name: str
-) -> str:
-    """Format status response"""
-    
-    # Progress bar
-    bar = level_info.get_progress_bar(20)
-    
-    # Pakaian bot
-    if clothing:
-        if hasattr(clothing, 'get_description'):
-            bot_clothing = clothing.get_description()
-        elif isinstance(clothing, dict):
-            bot_clothing = clothing.get('description', 'tidak diketahui')
-        else:
-            bot_clothing = "pakaian biasa"
-    else:
-        bot_clothing = "pakaian biasa"
-    
-    # Lokasi
-    if state and isinstance(state, dict):
-        location = state.get('location_bot', 'ruang tamu')
-        emotion_bot = state.get('emotion_bot', 'netral')
-        arousal_bot = state.get('arousal_bot', 0)
-    else:
-        location = "ruang tamu"
-        emotion_bot = "netral"
-        arousal_bot = 0
-    
-    # Level name
-    level_names = {
-        1: "Malu-malu", 2: "Mulai terbuka", 3: "Goda-godaan",
-        4: "Dekat", 5: "Sayang", 6: "PACAR/PDKT",
-        7: "Nyaman", 8: "Eksplorasi", 9: "Bergairah",
-        10: "Passionate", 11: "Soul Bounded", 12: "Aftercare"
-    }
-    level_name = level_names.get(character.level, f"Level {character.level}")
-    
-    # Stamina bars
-    bot_stamina_bar = _stamina_bar(character.stamina_bot)
-    user_stamina_bar = _stamina_bar(character.stamina_user)
-    
-    response = (
-        f"📊 **STATUS HUBUNGAN**\n\n"
-        f"👤 **Karakter:** {bot_name} ({character.role.value.upper()})\n"
-        f"👥 **User:** {user_name}\n\n"
-        f"📈 **Level:** {character.level}/12 - {level_name}\n"
-        f"📊 Progress: {bar} {level_info.progress:.0f}%\n"
-        f"💬 Total Chat: {character.total_chats}\n"
-        f"💦 Total Climax: {character.total_climax_bot + character.total_climax_user}\n\n"
-        f"📍 **Lokasi:** {location}\n"
-        f"👗 **Pakaian Bot:** {bot_clothing}\n"
-        f"🎭 **Emosi Bot:** {emotion_bot} | Arousal: {arousal_bot}%\n"
-        f"🎭 **Mood Bot:** {mood.upper()}\n\n"
-        f"💪 **Stamina:**\n"
-        f"• Bot: {bot_stamina_bar} {character.stamina_bot}%\n"
-        f"• User: {user_stamina_bar} {character.stamina_user}%"
-    )
-    
-    # Tambah info siklus intim jika dalam siklus
-    if character.in_intimacy_cycle:
-        if character.level == 11:
-            response += (
-                f"\n\n🔥 **SOUL BOUNDED**\n"
-                f"• Siklus intim #{character.intimacy_cycle_count}\n"
-                f"• Progress: {level_info.progress:.0f}% ke Aftercare"
-            )
-        elif character.level == 12:
-            response += (
-                f"\n\n💤 **AFTERCARE**\n"
-                f"• Siklus intim #{character.intimacy_cycle_count}\n"
-                f"• Butuh kehangatan dan pelukan"
-            )
-    
-    return response
-
-
-def _format_progress_response(
-    character,
-    level_info,
-    stamina,
-    bot_name: str,
-    weighted_score: float
-) -> str:
-    """Format progress response (RAHASIA untuk user)"""
     
     # Progress bar
     bar = level_info.get_progress_bar(20)
@@ -250,8 +149,8 @@ def _format_progress_response(
     level_desc = _get_level_description(character.level, character.in_intimacy_cycle)
     
     # Stamina descriptions
-    bot_stamina_desc = _get_stamina_description(character.stamina_bot)
-    user_stamina_desc = _get_stamina_description(character.stamina_user)
+    bot_stamina_desc = _get_stamina_description(character.bot.stamina)
+    user_stamina_desc = _get_stamina_description(character.user.stamina)
     
     # Next level info
     next_level_info = ""
@@ -298,29 +197,32 @@ def _format_progress_response(
     weighted_bar = "⭐" * int(weighted_score * 10) + "·" * (10 - int(weighted_score * 10))
     
     # Stamina bars
-    bot_stamina_bar = _stamina_bar(character.stamina_bot)
-    user_stamina_bar = _stamina_bar(character.stamina_user)
+    bot_stamina_bar = _stamina_bar(character.bot.stamina)
+    user_stamina_bar = _stamina_bar(character.user.stamina)
     
-    response = (
-        f"📊 **PROGRESS HUBUNGAN** _(RAHASIA - Bot tidak tahu)_\n\n"
-        f"👤 **{bot_name}** (Level {character.level}/12)\n"
-        f"📈 {level_desc}\n\n"
-        f"📊 Progress: {bar} {level_info.progress:.0f}%\n"
-        f"💬 Total Chat: {character.total_chats}\n"
-        f"💦 Climax Bot: {character.total_climax_bot}x | User: {character.total_climax_user}x\n"
-        f"🧠 Weighted Memory: {weighted_bar} {weighted_score:.0%}\n"
-        f"{next_level_info}"
-        f"{cycle_info}\n"
-        f"💪 **Stamina:**\n"
-        f"• Bot: {bot_stamina_bar} {character.stamina_bot}% ({bot_stamina_desc})\n"
-        f"• User: {user_stamina_bar} {character.stamina_user}% ({user_stamina_desc})\n\n"
-        f"⚠️ **Bot tidak tahu Mas melihat ini!**\n"
-        f"💡 Semakin banyak chat, semakin cepat level naik!\n"
-        f"💡 Aktivitas intim memberi boost lebih besar!\n"
-        f"💡 Momen penting (⭐) lebih diingat oleh bot!"
-    )
+    response = f"""
+📊 **PROGRESS HUBUNGAN** _(RAHASIA - Bot tidak tahu)_
+
+👤 **{character.bot.name}** (Level {character.level}/12)
+📈 {level_desc}
+
+📊 Progress: {bar} {level_info.progress:.0f}%
+💬 Total Chat: {character.total_chats}
+💦 Climax Bot: {character.bot.total_climax}x | User: {character.user.total_climax}x
+🧠 Weighted Memory: {weighted_bar} {weighted_score:.0%}
+{next_level_info}
+{cycle_info}
+💪 **Stamina:**
+• Bot: {bot_stamina_bar} {character.bot.stamina}% ({bot_stamina_desc})
+• User: {user_stamina_bar} {character.user.stamina}% ({user_stamina_desc})
+
+⚠️ **Bot tidak tahu Mas melihat ini!**
+💡 Semakin banyak chat, semakin cepat level naik!
+💡 Aktivitas intim memberi boost lebih besar!
+💡 Momen penting (⭐) lebih diingat oleh bot!
+"""
     
-    return response
+    await update.message.reply_text(response, parse_mode='HTML')
 
 
 def _stamina_bar(value: int, length: int = 15) -> str:
