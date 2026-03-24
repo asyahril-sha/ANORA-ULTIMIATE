@@ -93,7 +93,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return SELECTING_ROLE
 
 
-async def role_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, role: CharacterRole) -> int:
+async def role_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Callback setelah user memilih role
     """
@@ -102,6 +102,31 @@ async def role_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, role
     
     user = update.effective_user
     user_id = user.id
+    
+    # Ambil role dari callback_data
+    data = query.data
+    role_name = data.replace("role_", "")
+    
+    # Map ke CharacterRole
+    role_map = {
+        "ipar": CharacterRole.IPAR,
+        "teman_kantor": CharacterRole.TEMAN_KANTOR,
+        "janda": CharacterRole.JANDA,
+        "pelakor": CharacterRole.PELAKOR,
+        "istri_orang": CharacterRole.ISTRI_ORANG,
+        "pdkt": CharacterRole.PDKT,
+        "sepupu": CharacterRole.SEPUPU,
+        "teman_sma": CharacterRole.TEMAN_SMA,
+        "mantan": CharacterRole.MANTAN,
+    }
+    
+    role = role_map.get(role_name)
+    if not role:
+        await query.edit_message_text(
+            "❌ Role tidak valid.",
+            parse_mode='HTML'
+        )
+        return ConversationHandler.END
     
     # Buat identity manager
     identity_manager = IdentityManager()
@@ -127,7 +152,7 @@ async def role_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, role
         # Format response
         response = _format_welcome_message(registration, state)
         
-        # Edit pesan
+        # Edit pesan (ganti keyboard dengan pesan selamat datang)
         await query.edit_message_text(
             response,
             parse_mode='HTML'
@@ -138,7 +163,7 @@ async def role_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, role
     except Exception as e:
         logger.error(f"Error creating character: {e}")
         await query.edit_message_text(
-            "❌ Terjadi kesalahan saat membuat karakter. Silakan coba lagi.",
+            f"❌ Terjadi kesalahan saat membuat karakter.\n\nError: {str(e)[:100]}",
             parse_mode='HTML'
         )
     
@@ -161,10 +186,10 @@ async def agree_18_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handler untuk /help - Bantuan lengkap (command handler, bukan callback)
+    Handler untuk /help - Bantuan lengkap (command handler)
     """
     user_id = update.effective_user.id
-    is_admin = (user_id == settings.admin_id)
+    is_admin = (user_id == 6792300623)  # Admin ID
     
     help_text = (
         "📚 **BANTUAN AMORIA 9.9**\n\n"
@@ -180,21 +205,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/sessions - Lihat semua karakter tersimpan\n"
         "/character [role] [nomor] - Lanjutkan karakter\n\n"
         "<b>Character Commands:</b>\n"
-        "/character-list - Lihat semua karakter\n"
-        "/character-pause - Jeda karakter\n"
-        "/character-resume - Lanjutkan karakter\n"
-        "/character-stop - Hentikan karakter\n\n"
+        "/character_list - Lihat semua karakter\n"
+        "/character_pause - Jeda karakter\n"
+        "/character_resume - Lanjutkan karakter\n"
+        "/character_stop - Hentikan karakter\n\n"
         "<b>Ex & FWB Commands:</b>\n"
-        "/ex-list - Lihat daftar mantan\n"
+        "/ex_list - Lihat daftar mantan\n"
         "/ex [nomor] - Detail mantan\n"
-        "/fwb-request [nomor] - Request jadi FWB\n"
-        "/fwb-list - Lihat daftar FWB\n"
-        "/fwb-pause [nomor] - Jeda FWB\n"
-        "/fwb-resume [nomor] - Lanjutkan FWB\n"
-        "/fwb-end [nomor] - Akhiri FWB\n\n"
+        "/fwb_request [nomor] - Request jadi FWB\n"
+        "/fwb_list - Lihat daftar FWB\n"
+        "/fwb_pause [nomor] - Jeda FWB\n"
+        "/fwb_resume [nomor] - Lanjutkan FWB\n"
+        "/fwb_end [nomor] - Akhiri FWB\n\n"
         "<b>HTS Commands:</b>\n"
-        "/hts-list - Lihat TOP 10 HTS\n"
-        "/hts-[nomor] - Panggil HTS untuk intim\n\n"
+        "/hts_list - Lihat TOP 10 HTS\n"
+        "/hts_[nomor] - Panggil HTS untuk intim\n\n"
         "<b>Public Area Commands:</b>\n"
         "/explore - Cari lokasi random\n"
         "/locations - Lihat semua lokasi\n"
@@ -204,17 +229,21 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/memory - Ringkasan memory\n"
         "/flashback - Flashback random\n\n"
         "<b>Ranking Commands:</b>\n"
-        "/top-hts - TOP 5 ranking HTS\n"
-        "/my-climax - Statistik climax pribadi\n"
-        "/climax-history - History climax\n\n"
-        "<b>Admin Commands (Admin Only):</b>\n"
-        "/admin - Panel admin\n"
-        "/stats - Statistik bot\n"
-        "/db-stats - Statistik database\n"
-        "/backup - Backup manual\n"
-        "/recover - Restore dari backup\n"
-        "/debug - Info debug"
+        "/top_hts - TOP 5 ranking HTS\n"
+        "/my_climax - Statistik climax pribadi\n"
+        "/climax_history - History climax"
     )
+    
+    if is_admin:
+        help_text += (
+            "\n\n<b>Admin Commands:</b>\n"
+            "/admin - Panel admin\n"
+            "/stats - Statistik bot\n"
+            "/db_stats - Statistik database\n"
+            "/backup - Backup manual\n"
+            "/recover - Restore dari backup\n"
+            "/debug - Info debug"
+        )
     
     await update.message.reply_text(help_text, parse_mode='HTML')
 
@@ -238,21 +267,21 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "/sessions - Lihat semua karakter tersimpan\n"
         "/character [role] [nomor] - Lanjutkan karakter\n\n"
         "<b>Character Commands:</b>\n"
-        "/character-list - Lihat semua karakter\n"
-        "/character-pause - Jeda karakter\n"
-        "/character-resume - Lanjutkan karakter\n"
-        "/character-stop - Hentikan karakter\n\n"
+        "/character_list - Lihat semua karakter\n"
+        "/character_pause - Jeda karakter\n"
+        "/character_resume - Lanjutkan karakter\n"
+        "/character_stop - Hentikan karakter\n\n"
         "<b>Ex & FWB Commands:</b>\n"
-        "/ex-list - Lihat daftar mantan\n"
+        "/ex_list - Lihat daftar mantan\n"
         "/ex [nomor] - Detail mantan\n"
-        "/fwb-request [nomor] - Request jadi FWB\n"
-        "/fwb-list - Lihat daftar FWB\n"
-        "/fwb-pause [nomor] - Jeda FWB\n"
-        "/fwb-resume [nomor] - Lanjutkan FWB\n"
-        "/fwb-end [nomor] - Akhiri FWB\n\n"
+        "/fwb_request [nomor] - Request jadi FWB\n"
+        "/fwb_list - Lihat daftar FWB\n"
+        "/fwb_pause [nomor] - Jeda FWB\n"
+        "/fwb_resume [nomor] - Lanjutkan FWB\n"
+        "/fwb_end [nomor] - Akhiri FWB\n\n"
         "<b>HTS Commands:</b>\n"
-        "/hts-list - Lihat TOP 10 HTS\n"
-        "/hts-[nomor] - Panggil HTS untuk intim\n\n"
+        "/hts_list - Lihat TOP 10 HTS\n"
+        "/hts_[nomor] - Panggil HTS untuk intim\n\n"
         "<b>Public Area Commands:</b>\n"
         "/explore - Cari lokasi random\n"
         "/locations - Lihat semua lokasi\n"
@@ -262,16 +291,9 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         "/memory - Ringkasan memory\n"
         "/flashback - Flashback random\n\n"
         "<b>Ranking Commands:</b>\n"
-        "/top-hts - TOP 5 ranking HTS\n"
-        "/my-climax - Statistik climax pribadi\n"
-        "/climax-history - History climax\n\n"
-        "<b>Admin Commands (Admin Only):</b>\n"
-        "/admin - Panel admin\n"
-        "/stats - Statistik bot\n"
-        "/db-stats - Statistik database\n"
-        "/backup - Backup manual\n"
-        "/recover - Restore dari backup\n"
-        "/debug - Info debug"
+        "/top_hts - TOP 5 ranking HTS\n"
+        "/my_climax - Statistik climax pribadi\n"
+        "/climax_history - History climax"
     )
     
     keyboard = [[InlineKeyboardButton("🔙 Kembali", callback_data="back_to_main")]]
@@ -383,20 +405,10 @@ def _format_welcome_message(registration: CharacterRegistration, state) -> str:
     user = registration.user
     
     # Pakaian bot
-    if state and isinstance(state, dict):
-        clothing_state = state.get('clothing_state')
-        if clothing_state and hasattr(clothing_state, 'get_description'):
-            bot_clothing = clothing_state.get_description()
-        else:
-            bot_clothing = "daster rumah"
-    else:
-        bot_clothing = "daster rumah"
+    bot_clothing = "daster rumah"
     
     # Lokasi
-    if state and isinstance(state, dict):
-        location = state.get('location_bot', 'ruang tamu')
-    else:
-        location = "ruang tamu"
+    location = "ruang tamu"
     
     # Panggilan berdasarkan level
     if registration.level <= 6:
@@ -442,7 +454,7 @@ def _format_welcome_message(registration: CharacterRegistration, state) -> str:
         f"📍 **Sekarang:**\n"
         f"• Aku di {location}\n"
         f"• Waktu: siang\n"
-        f"• Mood: {bot.mood if hasattr(bot, 'mood') else 'normal'}\n"
+        f"• Mood: normal\n"
         f"{family_text}\n"
         f"📊 **Progress:**\n"
         f"Level {registration.level}/12 - {level_name}\n"
