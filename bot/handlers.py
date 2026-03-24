@@ -24,6 +24,55 @@ from utils.logger import logger
 
 _active_engines: Dict[str, AIEngine] = {}
 
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+MAX_MESSAGE_LENGTH = 3000  # Telegram limit is 4096, use 4000 for safety
+
+
+# =============================================================================
+# HELPER: SEND LONG MESSAGE
+# =============================================================================
+
+async def send_long_message(update: Update, text: str, parse_mode: str = 'HTML'):
+    """
+    Kirim pesan panjang dengan split jika melebihi batas Telegram
+    
+    Args:
+        update: Update object dari Telegram
+        text: Teks pesan
+        parse_mode: Mode parsing ('HTML' atau 'Markdown')
+    """
+    if len(text) <= MAX_MESSAGE_LENGTH:
+        await update.message.reply_text(text, parse_mode=parse_mode)
+        return
+    
+    # Split menjadi beberapa pesan
+    parts = []
+    remaining = text
+    
+    while len(remaining) > MAX_MESSAGE_LENGTH:
+        # Cari posisi terakhir newline atau spasi untuk split yang rapi
+        split_pos = remaining[:MAX_MESSAGE_LENGTH].rfind('\n')
+        if split_pos == -1:
+            split_pos = remaining[:MAX_MESSAGE_LENGTH].rfind(' ')
+        if split_pos == -1:
+            split_pos = MAX_MESSAGE_LENGTH
+        
+        parts.append(remaining[:split_pos])
+        remaining = remaining[split_pos:]
+    
+    parts.append(remaining)
+    
+    # Kirim per bagian
+    for i, part in enumerate(parts, 1):
+        prefix = f"📄 Bagian {i}/{len(parts)}:\n\n" if len(parts) > 1 else ""
+        await update.message.reply_text(prefix + part, parse_mode=parse_mode)
+
+
+# =============================================================================
+# MESSAGE HANDLER
+# =============================================================================
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk semua pesan teks"""
@@ -89,8 +138,8 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             }
         )
         
-        # Kirim respons
-        await update.message.reply_text(response, parse_mode='HTML')
+        # Kirim respons dengan fungsi split jika terlalu panjang
+        await send_long_message(update, response, parse_mode='HTML')
         
         # Update progress setelah chat
         await _update_progress(registration_id, ai_engine)
@@ -109,6 +158,10 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode='HTML'
         )
 
+
+# =============================================================================
+# UPDATE PROGRESS
+# =============================================================================
 
 async def _update_progress(registration_id: str, ai_engine: AIEngine) -> None:
     """Update progress setelah chat"""
@@ -154,6 +207,10 @@ async def _update_progress(registration_id: str, ai_engine: AIEngine) -> None:
     except Exception as e:
         logger.error(f"Error updating progress: {e}")
 
+
+# =============================================================================
+# OTHER HANDLERS
+# =============================================================================
 
 async def continue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler untuk melanjutkan session (internal)"""
@@ -259,7 +316,10 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         logger.error(f"Error sending error message: {e}")
 
 
-# Export all handlers
+# =============================================================================
+# EXPORTS
+# =============================================================================
+
 __all__ = [
     'message_handler',
     'continue_handler',
@@ -267,5 +327,6 @@ __all__ = [
     'status_command_handler',
     'cancel_command',
     'error_handler',
-    '_active_engines'
+    '_active_engines',
+    'send_long_message',
 ]
