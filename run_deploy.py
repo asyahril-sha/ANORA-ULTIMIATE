@@ -146,7 +146,6 @@ async def start_web_server():
                 allowed_updates=['message', 'callback_query', 'inline_query'],
                 drop_pending_updates=True,
                 max_connections=40,
-                timeout=30
             )
             
             info = await _bot_instance.application.bot.get_webhook_info()
