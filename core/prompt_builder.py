@@ -40,6 +40,7 @@ class PromptBuilder:
         emotional_flow: Any,
         spatial_awareness: Any,
         mood_system: Any,
+        relevant_memories: List[Dict] = None,
         intent_analysis: Dict
     ) -> str:
         """
@@ -87,6 +88,13 @@ class PromptBuilder:
         # ===== LONG TERM MEMORY =====
         if long_term_memory:
             lines.append(self._format_long_term_memory(long_term_memory, registration))
+            lines.append("")
+
+        # ===== RELEVANT MEMORY (PRIORITY) =====
+        if relevant_memories:
+            lines.append("🧠 MEMORY PENTING (WAJIB DIINGAT):")
+            for mem in relevant_memories:
+                lines.append(f"- {mem.get('content')}")
             lines.append("")
         
         # ===== LEVEL PROGRESS =====
