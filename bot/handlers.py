@@ -11,87 +11,63 @@ import time
 import logging
 import random
 import asyncio
-from typing import Dict, Optional, Any
-from datetime import datetime
+from typing import Dict
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
-from config import settings
 from identity.manager import IdentityManager
 from core.ai_engine import AIEngine
-from dynamics.emotional_flow import EmotionalFlow
-from dynamics.spatial_awareness import SpatialAwareness
-from dynamics.mood import MoodSystem
 from intimacy.leveling import LevelingSystem
-from intimacy.cycle import IntimacyCycle
-from intimacy.clothing import ClothingSystem
 from intimacy.stamina import StaminaSystem
-from tracking.family import FamilyTracking
-from tracking.promises import PromisesTracker
-from tracking.preferences import PreferencesLearner
-from command.status import status_command
 from utils.logger import logger
 
-# Active AI engines per registration
 _active_engines: Dict[str, AIEngine] = {}
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk semua pesan teks
-    - 100% AI generate response
-    - Tanpa template statis
-    """
+    """Handler untuk semua pesan teks"""
     try:
         user = update.effective_user
         user_message = update.message.text
         user_id = user.id
         
-        # Cek apakah ada karakter aktif
         current_reg = context.user_data.get('current_registration')
         
         if not current_reg:
             await update.message.reply_text(
                 "❌ **Tidak ada karakter aktif**\n\n"
-                "Ketik `/start` untuk memilih karakter, atau `/sessions` untuk melanjutkan karakter tersimpan.\n\n"
-                "_Masih bingung? Ketik /help untuk bantuan._",
+                "Ketik `/start` untuk memilih karakter.",
                 parse_mode='HTML'
             )
             return
         
         registration_id = current_reg.get('id')
         
-        # Cek pause
         if context.user_data.get('paused', False):
             await update.message.reply_text(
-                "⏸️ **Sesi dijeda**\n\n"
-                "Ketik `/unpause` untuk melanjutkan.",
+                "⏸️ **Sesi dijeda**\n\nKetik `/unpause` untuk melanjutkan.",
                 parse_mode='HTML'
             )
             return
         
-        # Dapatkan atau buat AI Engine
         if registration_id not in _active_engines:
             identity_manager = IdentityManager()
             character = await identity_manager.get_character(registration_id)
             
             if not character:
                 await update.message.reply_text(
-                    "❌ **Karakter tidak ditemukan**\n\n"
-                    "Ketik `/sessions` untuk melihat karakter tersimpan.",
+                    "❌ **Karakter tidak ditemukan**\n\nKetik `/sessions` untuk melihat karakter.",
                     parse_mode='HTML'
                 )
                 return
             
-            ai_engine = AIEngine(character)
-            _active_engines[registration_id] = ai_engine
-            
+            _active_engines[registration_id] = AIEngine(character)
             logger.info(f"✅ AI Engine created for {registration_id}")
         
         ai_engine = _active_engines[registration_id]
         
-        # Dapatkan state terbaru
+        # Dapatkan state (hanya lokasi, posisi, pakaian)
         identity_manager = IdentityManager()
         state = await identity_manager.get_character_state(registration_id)
         
@@ -126,18 +102,16 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         
     except Exception as e:
         logger.error(f"Error in message_handler: {e}")
+        import traceback
+        traceback.print_exc()
         await update.message.reply_text(
-            "❌ **Terjadi kesalahan**\n\n"
-            "Maaf, aku mengalami gangguan. Coba lagi nanti ya, Mas.\n\n"
-            "_Jika error berlanjut, laporkan ke admin._",
+            "❌ **Terjadi kesalahan**\n\nMaaf, aku mengalami gangguan. Coba lagi nanti.",
             parse_mode='HTML'
         )
 
 
 async def _update_progress(registration_id: str, ai_engine: AIEngine) -> None:
-    """
-    Update progress setelah chat
-    """
+    """Update progress setelah chat"""
     try:
         identity_manager = IdentityManager()
         character = await identity_manager.get_character(registration_id)
@@ -159,17 +133,19 @@ async def _update_progress(registration_id: str, ai_engine: AIEngine) -> None:
             character.level = new_level
             logger.info(f"Level up for {registration_id}: {old_level} → {new_level}")
         
-        # Stamina recovery
+        # Stamina recovery (gunakan bot dan user object)
         stamina = StaminaSystem()
         stamina.check_recovery()
-        character.stamina_bot = stamina.bot_stamina.current
-        character.stamina_user = stamina.user_stamina.current
+        
+        # Update stamina ke bot dan user object
+        character.bot.stamina = stamina.bot_stamina.current
+        character.user.stamina = stamina.user_stamina.current
         
         # Save to database
         db_reg = character.to_db_registration()
         await identity_manager.repo.update_registration(db_reg)
         
-        # Save state
+        # Save state (tanpa emotion/arousal)
         state = await identity_manager.get_character_state(registration_id)
         if state:
             state.updated_at = time.time()
@@ -180,9 +156,7 @@ async def _update_progress(registration_id: str, ai_engine: AIEngine) -> None:
 
 
 async def continue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk melanjutkan session (internal)
-    """
+    """Handler untuk melanjutkan session (internal)"""
     await update.message.reply_text(
         "🔄 **Melanjutkan session...**\n\n"
         "Gunakan `/sessions` untuk melihat daftar session yang tersimpan.",
@@ -191,11 +165,9 @@ async def continue_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk /help - Bantuan lengkap
-    """
+    """Handler untuk /help - Bantuan lengkap"""
     user_id = update.effective_user.id
-    is_admin = (user_id == settings.admin_id)
+    is_admin = (user_id == 6792300623)  # Admin ID
     
     help_text = (
         "📚 **BANTUAN AMORIA 9.9**\n\n"
@@ -240,7 +212,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "/climax_history - History climax"
     )
     
-    # Admin commands
     if is_admin:
         help_text += (
             "\n\n<b>Admin Commands:</b>\n"
@@ -256,17 +227,13 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 async def status_command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk /status - Alias ke status_command di command/status.py
-    """
+    """Handler untuk /status - Alias ke status_command di command/status.py"""
+    from command.status import status_command
     await status_command(update, context)
 
 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler untuk /cancel - Batalkan percakapan
-    """
-    # Clear pending data
+    """Handler untuk /cancel - Batalkan percakapan"""
     context.user_data.pop('pending_action', None)
     
     await update.message.reply_text(
@@ -277,9 +244,7 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Global error handler untuk semua error di bot
-    """
+    """Global error handler untuk semua error di bot"""
     logger.error(f"Update {update} caused error {context.error}")
     
     try:
