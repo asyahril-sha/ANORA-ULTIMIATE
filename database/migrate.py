@@ -21,7 +21,6 @@ from database.connection import get_db, close_db
 
 logger = logging.getLogger(__name__)
 
-
     await db.execute("DROP TABLE IF EXISTS registrations")
     logger.warning("⚠️ Dropped old registrations table (force clean)")
 
