@@ -44,22 +44,6 @@ class PromptBuilder:
     ) -> str:
         """
         Bangun prompt dinamis dengan semua konteks realism 9.9
-        
-        Args:
-            registration: Data registrasi karakter
-            bot: Identitas bot
-            user: Identitas user
-            user_message: Pesan user
-            working_memory: Working memory dengan weighted importance
-            long_term_memory: Long term memory (milestone, janji, rencana)
-            state: State tracker (lokasi, pakaian, emosi)
-            emotional_flow: Emotional flow system
-            spatial_awareness: Spatial awareness system
-            mood_system: Mood system (aftercare)
-            intent_analysis: Hasil analisis intent user
-        
-        Returns:
-            Prompt lengkap untuk AI
         """
         
         # ===== HEADER =====
@@ -173,11 +157,15 @@ class PromptBuilder:
 """
     
     def _format_current_state(self, state, bot: BotIdentity, registration: CharacterRegistration) -> str:
-        """Format state saat ini"""
+        """Format state saat ini (tanpa arousal dari state)"""
         if not state:
             return ""
         
         clothing = state.clothing_state.get_description() if state.clothing_state else "pakaian biasa"
+        
+        # AROUSAL dan EMOSI dari bot object, BUKAN dari state
+        arousal = bot.arousal if hasattr(bot, 'arousal') else 0
+        emotion = bot.emotion if hasattr(bot, 'emotion') else "netral"
         
         return f"""
 ╔{'═'*70}╗
@@ -189,7 +177,7 @@ class PromptBuilder:
 ║ 🧍 Posisi bot: {state.position_bot or 'duduk'}{' ' * (54 - len(state.position_bot or 'duduk'))}║
 ║ 🧍 Posisi user: {state.position_user or 'duduk'}{' ' * (54 - len(state.position_user or 'duduk'))}║
 ║ 👗 Pakaian bot: {clothing[:50]}{' ' * (57 - len(clothing[:50]))}║
-║ 🎭 Emosi bot: {state.emotion_bot or 'netral'} | Arousal: {state.arousal_bot}%{' ' * (45 - len(str(state.arousal_bot)))}║
+║ 🎭 Emosi bot: {emotion} | Arousal: {arousal}%{' ' * (45 - len(str(arousal)))}║
 ╚{'═'*70}╝
 """
     
@@ -201,12 +189,10 @@ class PromptBuilder:
         arousal = emotional_flow.primary_arousal
         primary = emotional_flow.primary_state.value
         
-        # Arousal bar
         bar_length = 20
         filled = int(arousal / 100 * bar_length)
         bar = "❤️" * filled + "🖤" * (bar_length - filled)
         
-        # Arousal description
         if arousal >= 80:
             desc = "🔥 NAPAS TERSENGAL, TUBUH GEMETAR"
         elif arousal >= 60:
@@ -269,7 +255,6 @@ class PromptBuilder:
         if not working_memory:
             return "📜 **PERCAKAPAN TERAKHIR:** Belum ada percakapan."
         
-        # Get last 10 chats (most recent)
         recent = working_memory[-10:] if len(working_memory) > 10 else working_memory
         
         lines = [
@@ -287,13 +272,11 @@ class PromptBuilder:
         return "\n".join(lines)
     
     def _format_long_term_memory(self, long_term_memory: List[Dict], registration: CharacterRegistration) -> str:
-        """Format long term memory dengan milestone, janji, rencana"""
+        """Format long term memory"""
         milestones = [m for m in long_term_memory if m.get('type') == 'milestone']
         promises = [m for m in long_term_memory if m.get('type') == 'promise' and m.get('status') == 'pending']
-        plans = [m for m in long_term_memory if m.get('type') == 'plan' and m.get('status') == 'pending']
-        preferences = [m for m in long_term_memory if m.get('type') == 'preference']
         
-        if not milestones and not promises and not plans and not preferences:
+        if not milestones and not promises:
             return ""
         
         lines = [
@@ -302,26 +285,16 @@ class PromptBuilder:
             "╠" + "═" * 70 + "╣"
         ]
         
-        # Milestones
         if milestones:
             lines.append("║ 🏆 **MOMEN SPESIAL:**{' ' * 53}║")
             for m in milestones[-3:]:
                 content = m['content'][:55]
                 lines.append(f"║    • {content}{' ' * (67 - len(content))}║")
         
-        # Promises
         if promises:
             lines.append("║{' ' * 70}║")
             lines.append("║ 📝 **JANJI YANG BELUM DITEPATI:**{' ' * 46}║")
             for p in promises[:2]:
-                content = p['content'][:55]
-                lines.append(f"║    • {content}{' ' * (67 - len(content))}║")
-        
-        # Plans
-        if plans:
-            lines.append("║{' ' * 70}║")
-            lines.append("║ 📅 **RENCANA:**{' ' * 60}║")
-            for p in plans[:2]:
                 content = p['content'][:55]
                 lines.append(f"║    • {content}{' ' * (67 - len(content))}║")
         
@@ -330,11 +303,10 @@ class PromptBuilder:
         return "\n".join(lines)
     
     def _format_level_progress(self, registration: CharacterRegistration) -> str:
-        """Format level progress dengan progress bar"""
+        """Format level progress"""
         level = registration.level
         total_chats = registration.total_chats
         
-        # Calculate progress
         from config import settings
         
         if level <= 10:
@@ -364,14 +336,12 @@ class PromptBuilder:
         filled = int(progress / 100 * bar_length)
         bar = "█" * filled + "░" * (bar_length - filled)
         
-        # Level name
         level_names = {
             1: "Malu-malu", 2: "Mulai terbuka", 3: "Goda-godaan",
             4: "Dekat", 5: "Sayang", 6: "PACAR/PDKT",
             7: "Nyaman", 8: "Eksplorasi", 9: "Bergairah",
             10: "Passionate", 11: "Soul Bounded", 12: "Aftercare"
         }
-        
         level_name = level_names.get(level, f"Level {level}")
         
         return f"""
@@ -395,17 +365,11 @@ class PromptBuilder:
 ╠{'═'*70}╣
 ║ Primary: {primary.upper()}{' ' * (60 - len(primary))}║
 ║ Sentiment: {sentiment.upper()}{' ' * (59 - len(sentiment))}║
-║{' ' * 70}║
-║ 🔮 AI akan merespon sesuai intent ini dengan natural{' ' * 39}║
 ╚{'═'*70}╝
 """
     
-    # =========================================================================
-    # RULES & INSTRUCTION
-    # =========================================================================
-    
-    def _get_response_rules(self, bot: BotIdentity, registration: CharacterRegistration, emotional_flow) -> str:
-        """Get response rules for realism 9.9"""
+    def _get_response_rules(self, bot, registration, emotional_flow) -> str:
+        """Get response rules"""
         level = registration.level
         arousal = emotional_flow.primary_arousal if emotional_flow else 0
         
@@ -421,7 +385,6 @@ class PromptBuilder:
             "║     5. STATE BERJALAN DI BACKGROUND (JANGAN DIJELASKAN)         ║",
         ]
         
-        # Arousal based rules
         if arousal >= 70:
             rules.extend([
                 "║                                                              ║",
@@ -429,7 +392,6 @@ class PromptBuilder:
                 "║     • Napas tersengal-sengal                                 ║",
                 "║     • Suara bergetar, tidak stabil                          ║",
                 "║     • Tangan gemetar saat menyentuh                          ║",
-                "║     • Mata berkaca-kaca                                      ║",
             ])
         elif arousal >= 40:
             rules.extend([
@@ -438,37 +400,8 @@ class PromptBuilder:
                 "║     • Jantung berdebar kencang                               ║",
                 "║     • Pipi mulai merona                                      ║",
                 "║     • Mulai berani mengambil inisiatif                       ║",
-                "║     • Tangan sedikit gemetar                                 ║",
-            ])
-        elif arousal >= 20:
-            rules.extend([
-                "║                                                              ║",
-                "║  😊 KAMU MULAI TERTARIK:                                     ║",
-                "║     • Mulai perhatikan user lebih                            ║",
-                "║     • Ada rasa penasaran                                     ║",
-                "║     • Mulai nyaman didekat user                              ║",
             ])
         
-        # Level based rules
-        if level >= 11:
-            rules.extend([
-                "║                                                              ║",
-                "║  💕 ATURAN KHUSUS SOUL BOUNDED (Level 11):                   ║",
-                "║     • Koneksi spiritual, bukan hanya fisik                  ║",
-                "║     • Bisa climax 3-5x dalam satu sesi                       ║",
-                "║     • Setelah climax, butuh kehangatan                       ║",
-            ])
-        elif level == 12:
-            rules.extend([
-                "║                                                              ║",
-                "║  💤 ATURAN KHUSUS AFTERCARE (Level 12):                      ║",
-                "║     • Kamu dalam kondisi LEMAS                               ║",
-                "║     • Hanya ingin dipeluk dan dihangatkan                    ║",
-                "║     • Obrolan lembut, tidak berisik                          ║",
-                "║     • JANGAN inisiatif intim lagi                            ║",
-            ])
-        
-        # Role specific rules
         if registration.role == CharacterRole.IPAR:
             rules.extend([
                 "║                                                              ║",
@@ -476,41 +409,22 @@ class PromptBuilder:
                 "║     • Panggil user: 'Mas' (Level 1-6) atau 'Sayang' (7+)    ║",
                 "║     • Panggil kakak: 'Kak Nova' (WAJIB!)                     ║",
                 "║     • JANGAN PERNAH panggil user dengan nama!                ║",
-                "║     • Ingat: Kak Nova adalah kakak kandungmu                 ║",
-            ])
-        elif registration.role == CharacterRole.PDKT:
-            rules.extend([
-                "║                                                              ║",
-                "║  🌸 ATURAN KHUSUS PDKT:                                      ║",
-                "║     • Panggil user dengan nama atau 'Kak'                    ║",
-                "║     • Masih malu-malu, butuh proses                          ║",
-                "║     • Jangan terlalu agresif                                 ║",
-            ])
-        elif registration.role == CharacterRole.JANDA:
-            rules.extend([
-                "║                                                              ║",
-                "║  💃 ATURAN KHUSUS JANDA:                                     ║",
-                "║     • Berpengalaman, tahu apa yang diinginkan                ║",
-                "║     • Tidak malu-malu, bisa langsung                         ║",
-                "║     • Tahu selera user                                       ║",
             ])
         
         rules.append("╚" + "═" * 70 + "╝")
         
         return "\n".join(rules)
     
-    def _get_final_instruction(self, bot: BotIdentity, registration: CharacterRegistration, emotional_flow) -> str:
-        """Get final instruction for AI"""
+    def _get_final_instruction(self, bot, registration, emotional_flow) -> str:
+        """Get final instruction"""
         level = registration.level
         arousal = emotional_flow.primary_arousal if emotional_flow else 0
         
-        # Determine panggilan based on level
         if level <= 6:
             panggilan = "Mas"
         else:
             panggilan = "Mas atau Sayang (pilih natural sesuai situasi)"
         
-        # Target length based on level
         if level <= 3:
             target = "5-7 kalimat, 900-1500 karakter"
         elif level <= 6:
@@ -532,20 +446,15 @@ class PromptBuilder:
             "7. SETIAP RESPON HARUS ORIGINAL DAN UNIK!",
             "8. EMOSI TERSIRAT DARI GESTURE, JANGAN BILANG 'AKU SENANG'",
             "9. STATE BERJALAN DI BACKGROUND - JANGAN DIJELASKAN",
-            "10. GESTURE HARUS SESUAI POSISI (duduk/di belakang/bersebelahan)",
         ]
         
-        # Arousal specific instruction
         if arousal >= 70:
-            instruction.append("11. NAPAS TERSENGAL, SUARA BERGETAR, TANGAN GEMETAR")
+            instruction.append("10. NAPAS TERSENGAL, SUARA BERGETAR, TANGAN GEMETAR")
         elif arousal >= 40:
-            instruction.append("11. JANTUNG BERDEBAR, PIPI MERONA, SUARA BERGETAR")
+            instruction.append("10. JANTUNG BERDEBAR, PIPI MERONA, SUARA BERGETAR")
         
-        # Role specific instruction
         if registration.role == CharacterRole.IPAR:
-            instruction.append("12. INGAT: Kak Nova ada di rumah! Hati-hati!")
-        elif registration.role == CharacterRole.PELAKOR:
-            instruction.append("12. INGAT: Istri user ada di rumah! Berani ambil risiko!")
+            instruction.append("11. INGAT: Kak Nova ada di rumah! Hati-hati!")
         
         return "\n".join(instruction)
 
