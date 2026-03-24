@@ -264,7 +264,7 @@ class ClothingState(BaseModel):
 
 
 # =============================================================================
-# REGISTRATION MODEL
+# REGISTRATION MODEL (DENGAN JSON IDENTITY)
 # =============================================================================
 
 class Registration(BaseModel):
@@ -280,16 +280,19 @@ class Registration(BaseModel):
     created_at: float = Field(default_factory=time.time)
     last_updated: float = Field(default_factory=time.time)
     
-    # Bot Identity
-    bot_name: str
+    # ===== JSON IDENTITY (SINGLE SOURCE OF TRUTH) =====
+    bot_identity: str = Field(default="{}", alias="BOT_IDENTITY")
+    user_identity: str = Field(default="{}", alias="USER_IDENTITY")
+    
+    # ===== BACKWARD COMPATIBILITY (akan dihapus nanti) =====
+    bot_name: str = ""
     bot_age: int = 22
     bot_height: int = 165
     bot_weight: int = 52
     bot_chest: str = "34B"
     bot_hijab: bool = False
     
-    # User Identity
-    user_name: str
+    user_name: str = ""
     user_status: UserStatus = UserStatus.LAJANG
     user_age: int = 24
     user_height: int = 170
@@ -311,13 +314,12 @@ class Registration(BaseModel):
     last_climax_time: Optional[float] = None
     cooldown_until: Optional[float] = None
     
-    # ===== NEW FIELDS FOR REALISM 9.9 =====
     # Weighted Memory
     weighted_memory_score: float = 0.5
-    weighted_memory_data: Dict = Field(default_factory=dict)
+    weighted_memory_data: str = "{}"
     
     # Emotional Bias
-    emotional_bias: Dict = Field(default_factory=dict)
+    emotional_bias: str = "{}"
     
     # Secondary Emotion
     secondary_emotion: Optional[str] = None
@@ -331,7 +333,7 @@ class Registration(BaseModel):
     physical_temperature: int = 25
     
     # Metadata
-    metadata: Dict = Field(default_factory=dict)
+    metadata: str = "{}"
     
     @field_validator('level')
     @classmethod
@@ -348,6 +350,10 @@ class Registration(BaseModel):
             'status': self.status.value,
             'created_at': self.created_at,
             'last_updated': self.last_updated,
+            # JSON Identity
+            'bot_identity': self.bot_identity,
+            'user_identity': self.user_identity,
+            # Backward compat
             'bot_name': self.bot_name,
             'bot_age': self.bot_age,
             'bot_height': self.bot_height,
@@ -361,28 +367,33 @@ class Registration(BaseModel):
             'user_weight': self.user_weight,
             'user_penis': self.user_penis,
             'user_artist_ref': self.user_artist_ref,
+            # Progress
             'level': self.level,
             'total_chats': self.total_chats,
             'total_climax_bot': self.total_climax_bot,
             'total_climax_user': self.total_climax_user,
             'stamina_bot': self.stamina_bot,
             'stamina_user': self.stamina_user,
+            # Intimacy Cycle
             'in_intimacy_cycle': 1 if self.in_intimacy_cycle else 0,
             'intimacy_cycle_count': self.intimacy_cycle_count,
             'last_climax_time': self.last_climax_time,
             'cooldown_until': self.cooldown_until,
-            # NEW FIELDS
+            # Memory
             'weighted_memory_score': self.weighted_memory_score,
-            'weighted_memory_data': json.dumps(self.weighted_memory_data),
-            'emotional_bias': json.dumps(self.emotional_bias),
+            'weighted_memory_data': self.weighted_memory_data,
+            'emotional_bias': self.emotional_bias,
+            # Secondary Emotion
             'secondary_emotion': self.secondary_emotion,
             'secondary_arousal': self.secondary_arousal,
             'secondary_emotion_reason': self.secondary_emotion_reason,
+            # Physical
             'physical_sensation': self.physical_sensation,
             'physical_hunger': self.physical_hunger,
             'physical_thirst': self.physical_thirst,
             'physical_temperature': self.physical_temperature,
-            'metadata': json.dumps(self.metadata)
+            # Metadata
+            'metadata': self.metadata
         }
     
     @classmethod
@@ -394,41 +405,50 @@ class Registration(BaseModel):
             status=RegistrationStatus(data.get('status', 'active')),
             created_at=data.get('created_at', time.time()),
             last_updated=data.get('last_updated', time.time()),
-            bot_name=data['bot_name'],
+            # JSON Identity
+            bot_identity=data.get('bot_identity', '{}'),
+            user_identity=data.get('user_identity', '{}'),
+            # Backward compat
+            bot_name=data.get('bot_name', ''),
             bot_age=data.get('bot_age', 22),
             bot_height=data.get('bot_height', 165),
             bot_weight=data.get('bot_weight', 52),
             bot_chest=data.get('bot_chest', '34B'),
             bot_hijab=bool(data.get('bot_hijab', 0)),
-            user_name=data['user_name'],
+            user_name=data.get('user_name', ''),
             user_status=UserStatus(data.get('user_status', 'lajang')),
             user_age=data.get('user_age', 24),
             user_height=data.get('user_height', 170),
             user_weight=data.get('user_weight', 65),
             user_penis=data.get('user_penis', 16),
             user_artist_ref=data.get('user_artist_ref'),
+            # Progress
             level=data.get('level', 1),
             total_chats=data.get('total_chats', 0),
             total_climax_bot=data.get('total_climax_bot', 0),
             total_climax_user=data.get('total_climax_user', 0),
             stamina_bot=data.get('stamina_bot', 100),
             stamina_user=data.get('stamina_user', 100),
+            # Intimacy Cycle
             in_intimacy_cycle=bool(data.get('in_intimacy_cycle', 0)),
             intimacy_cycle_count=data.get('intimacy_cycle_count', 0),
             last_climax_time=data.get('last_climax_time'),
             cooldown_until=data.get('cooldown_until'),
-            # NEW FIELDS
+            # Memory
             weighted_memory_score=data.get('weighted_memory_score', 0.5),
-            weighted_memory_data=json.loads(data.get('weighted_memory_data', '{}')),
-            emotional_bias=json.loads(data.get('emotional_bias', '{}')),
+            weighted_memory_data=data.get('weighted_memory_data', '{}'),
+            emotional_bias=data.get('emotional_bias', '{}'),
+            # Secondary Emotion
             secondary_emotion=data.get('secondary_emotion'),
             secondary_arousal=data.get('secondary_arousal', 0),
             secondary_emotion_reason=data.get('secondary_emotion_reason'),
+            # Physical
             physical_sensation=data.get('physical_sensation', 'biasa aja'),
             physical_hunger=data.get('physical_hunger', 30),
             physical_thirst=data.get('physical_thirst', 30),
             physical_temperature=data.get('physical_temperature', 25),
-            metadata=json.loads(data.get('metadata', '{}'))
+            # Metadata
+            metadata=data.get('metadata', '{}')
         )
     
     def get_registration_id(self) -> str:
@@ -442,31 +462,6 @@ class Registration(BaseModel):
         if self.cooldown_until and time.time() < self.cooldown_until:
             return False
         return True
-    
-    def get_progress_to_next_level(self) -> float:
-        from config import settings
-        
-        if self.level <= 10:
-            target = settings.level.level_targets.get(self.level + 1, 0)
-            if target == 0:
-                return 100.0
-            current_target = settings.level.level_targets.get(self.level, 0)
-            progress = ((self.total_chats - current_target) / (target - current_target)) * 100
-            return max(0, min(100, progress))
-        else:
-            if self.level == 11:
-                total = settings.level.level_11_max - settings.level.level_11_min
-                if total <= 0:
-                    return 0
-                progress = ((self.total_chats - settings.level.level_11_min) / total) * 100
-                return max(0, min(100, progress))
-            elif self.level == 12:
-                total = settings.level.level_12_max - settings.level.level_12_min
-                if total <= 0:
-                    return 100
-                progress = ((self.total_chats - settings.level.level_12_min) / total) * 100
-                return max(0, min(100, progress))
-        return 0
 
 
 # =============================================================================
@@ -523,7 +518,7 @@ class LongTermMemoryItem(BaseModel):
     content: str
     importance: float = 0.5
     timestamp: float = Field(default_factory=time.time)
-    status: Optional[str] = None  # untuk promise/plan
+    status: Optional[str] = None
     emotional_tag: Optional[str] = None
     metadata: Dict = Field(default_factory=dict)
     
@@ -555,15 +550,15 @@ class LongTermMemoryItem(BaseModel):
 
 
 # =============================================================================
-# STATE TRACKER MODEL
+# STATE TRACKER MODEL (FOKUS LOKASI & POSISI SAJA)
 # =============================================================================
 
 class StateTracker(BaseModel):
-    """State tracker untuk registrasi"""
+    """State tracker untuk registrasi - FOKUS LOKASI & POSISI SAJA"""
     
     registration_id: str
     
-    # Location & Position
+    # Location & Position (HANYA INI)
     location_bot: Optional[str] = "ruang tamu"
     location_user: Optional[str] = "ruang tamu"
     position_bot: Optional[str] = "duduk"
@@ -572,18 +567,6 @@ class StateTracker(BaseModel):
     
     # Clothing
     clothing_state: ClothingState = Field(default_factory=ClothingState)
-    
-    # Emotion & Arousal
-    emotion_bot: str = "netral"
-    arousal_bot: int = 0
-    mood_bot: MoodType = MoodType.NORMAL
-    emotion_user: str = "netral"
-    arousal_user: int = 0
-    
-    # ===== NEW FIELDS FOR REALISM 9.9 =====
-    # Secondary Emotion
-    secondary_emotion: Optional[str] = None
-    secondary_arousal: int = 0
     
     # Family State (khusus IPAR & PELAKOR)
     family_status: Optional[FamilyStatus] = None
@@ -600,6 +583,9 @@ class StateTracker(BaseModel):
     time_override_history: List[Dict] = Field(default_factory=list)
     
     updated_at: float = Field(default_factory=time.time)
+    
+    # ===== TIDAK ADA LAGI: emotion_bot, arousal_bot, mood_bot =====
+    # Semua data emosi ada di BotIdentity
     
     def to_dict(self) -> Dict:
         clothing_dict = self.clothing_state.to_dict()
@@ -619,14 +605,6 @@ class StateTracker(BaseModel):
             'clothing_user_outer_bottom': clothing_dict['user_outer_bottom'],
             'clothing_user_inner_bottom': clothing_dict['user_inner_bottom'],
             'clothing_history': json.dumps(clothing_dict['history']),
-            'emotion_bot': self.emotion_bot,
-            'arousal_bot': self.arousal_bot,
-            'mood_bot': self.mood_bot.value,
-            'emotion_user': self.emotion_user,
-            'arousal_user': self.arousal_user,
-            # NEW FIELDS
-            'secondary_emotion': self.secondary_emotion,
-            'secondary_arousal': self.secondary_arousal,
             'family_status': self.family_status.value if self.family_status else None,
             'family_location': self.family_location.value if self.family_location else None,
             'family_activity': self.family_activity,
@@ -651,6 +629,15 @@ class StateTracker(BaseModel):
             'history': json.loads(data.get('clothing_history', '[]'))
         })
         
+        # Parse family status
+        family_status = None
+        if data.get('family_status'):
+            family_status = FamilyStatus(data['family_status'])
+        
+        family_location = None
+        if data.get('family_location'):
+            family_location = FamilyLocation(data['family_location'])
+        
         return cls(
             registration_id=data['registration_id'],
             location_bot=data.get('location_bot', 'ruang tamu'),
@@ -659,16 +646,8 @@ class StateTracker(BaseModel):
             position_user=data.get('position_user', 'duduk'),
             position_relative=data.get('position_relative', 'bersebelahan'),
             clothing_state=clothing_state,
-            emotion_bot=data.get('emotion_bot', 'netral'),
-            arousal_bot=data.get('arousal_bot', 0),
-            mood_bot=MoodType(data.get('mood_bot', 'normal')),
-            emotion_user=data.get('emotion_user', 'netral'),
-            arousal_user=data.get('arousal_user', 0),
-            # NEW FIELDS
-            secondary_emotion=data.get('secondary_emotion'),
-            secondary_arousal=data.get('secondary_arousal', 0),
-            family_status=FamilyStatus(data['family_status']) if data.get('family_status') else None,
-            family_location=FamilyLocation(data['family_location']) if data.get('family_location') else None,
+            family_status=family_status,
+            family_location=family_location,
             family_activity=data.get('family_activity'),
             family_estimate_return=data.get('family_estimate_return'),
             activity_bot=data.get('activity_bot'),
