@@ -216,6 +216,8 @@ class IntimacyTooLowError(IntimacyLevelError):
             current=current,
             required=required
         )
+        self.current = current
+        self.required = required
 
 
 class StaminaTooLowError(AmoriaError):
@@ -227,6 +229,7 @@ class StaminaTooLowError(AmoriaError):
             code="STAMINA_TOO_LOW",
             details={"stamina": stamina}
         )
+        self.stamina = stamina
 
 
 class CooldownActiveError(AmoriaError):
