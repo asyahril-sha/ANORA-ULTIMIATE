@@ -110,7 +110,7 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await query.answer()
     
     help_text = (
-        "📚 **BANTUAN AMORIA**\n\n"
+        "📚 **BANTUAN AMORIA 9.9**\n\n"
         "<b>Basic Commands:</b>\n"
         "/start - Mulai bot & pilih karakter\n"
         "/help - Bantuan lengkap\n"
@@ -123,10 +123,21 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "/sessions - Lihat semua karakter tersimpan\n"
         "/character [role] [nomor] - Lanjutkan karakter\n\n"
         "<b>Character Commands:</b>\n"
-        "/character-list - Lihat semua karakter\n"
-        "/character-pause - Jeda karakter\n"
-        "/character-resume - Lanjutkan karakter\n"
-        "/character-stop - Hentikan karakter\n\n"
+        "/character_list - Lihat semua karakter\n"
+        "/character_pause - Jeda karakter\n"
+        "/character_resume - Lanjutkan karakter\n"
+        "/character_stop - Hentikan karakter\n\n"
+        "<b>Ex & FWB Commands:</b>\n"
+        "/ex_list - Lihat daftar mantan\n"
+        "/ex [nomor] - Detail mantan\n"
+        "/fwb_request [nomor] - Request jadi FWB\n"
+        "/fwb_list - Lihat daftar FWB\n"
+        "/fwb_pause [nomor] - Jeda FWB\n"
+        "/fwb_resume [nomor] - Lanjutkan FWB\n"
+        "/fwb_end [nomor] - Akhiri FWB\n\n"
+        "<b>HTS Commands:</b>\n"
+        "/hts_list - Lihat TOP 10 HTS\n"
+        "/hts_[nomor] - Panggil HTS untuk intim\n\n"
         "<b>Public Area Commands:</b>\n"
         "/explore - Cari lokasi random\n"
         "/locations - Lihat semua lokasi\n"
@@ -134,7 +145,11 @@ async def help_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "/go [lokasi] - Pindah ke lokasi\n\n"
         "<b>Memory Commands:</b>\n"
         "/memory - Ringkasan memory\n"
-        "/flashback - Flashback random"
+        "/flashback - Flashback random\n\n"
+        "<b>Ranking Commands:</b>\n"
+        "/top_hts - TOP 5 ranking HTS\n"
+        "/my_climax - Statistik climax pribadi\n"
+        "/climax_history - History climax"
     )
     
     keyboard = [[InlineKeyboardButton("🔙 Kembali", callback_data="back_to_main")]]
@@ -198,7 +213,7 @@ async def stop_pdkt_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 await query.edit_message_text(
                     f"💔 **PDKT dengan {result['bot_name']} telah dihentikan.**\n\n"
                     f"{result['bot_name']} sekarang menjadi mantan.\n"
-                    f"Gunakan `/ex-list` untuk melihat daftar mantan.",
+                    f"Gunakan `/ex_list` untuk melihat daftar mantan.",
                     parse_mode='HTML'
                 )
             else:
