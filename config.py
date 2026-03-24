@@ -57,7 +57,7 @@ class AISettings(BaseSettings):
     model: str = Field("deepseek-chat", alias="AI_MODEL")
     
     min_response_length: int = Field(300, alias="MIN_RESPONSE_LENGTH")
-    max_response_length: int = Field(2000), alias="MAX_RESPONSE_LENGTH")
+    max_response_length: int = Field(2000, alias="MAX_RESPONSE_LENGTH")
     min_sentences: int = Field(2, alias="MIN_SENTENCES")
     max_sentences: int = Field(8, alias="MAX_SENTENCES")
     
