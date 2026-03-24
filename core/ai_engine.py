@@ -333,18 +333,18 @@ LANJUTAN RESPON:
             response = "Aku denger kok, Mas. Cerita lagi dong."
         
         max_len = min(settings.ai.max_response_length, 2500)
-    if len(response) > max_len:
-        # Potong di kalimat terakhir
-        truncated = response[:max_len]
-        last_period = truncated.rfind('.')
-        last_newline = truncated.rfind('\n')
-        cut_pos = max(last_period, last_newline)
-        if cut_pos > max_len - 200:
-            response = truncated[:cut_pos + 1] + "\n\n[lanjutan dipotong karena terlalu panjang]"
-        else:
-            response = truncated + "..."
+        if len(response) > max_len:
+            # Potong di kalimat terakhir
+            truncated = response[:max_len]
+            last_period = truncated.rfind('.')
+            last_newline = truncated.rfind('\n')
+            cut_pos = max(last_period, last_newline)
+            if cut_pos > max_len - 200:
+                response = truncated[:cut_pos + 1] + "\n\n[lanjutan dipotong karena terlalu panjang]"
+            else:
+                response = truncated + "..."
     
-    return response
+        return response
     
     def _has_gesture(self, response: str) -> bool:
         """Check if response has gesture"""
