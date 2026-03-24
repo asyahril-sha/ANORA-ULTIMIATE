@@ -1,29 +1,31 @@
-# tracking/__init__.py
+# utils/preferences.py
 # -*- coding: utf-8 -*-
 """
 =============================================================================
 AMORIA - Virtual Human dengan Jiwa
-Tracking Package - Family, Promises, Preferences
+REDIRECT: Preferences classes are now in tracking/preferences.py
+This file is kept for backward compatibility only.
 =============================================================================
 """
 
-from .family import FamilyTracking, FamilyMember, FamilyMemberStatus, FamilyMemberLocation, FamilyMemberActivity
-from .promises import PromisesTracker, Promise, Plan, PromiseStatus, PlanStatus, PromiseType
-from .preferences import PreferencesLearner, PreferenceCategory, PreferenceItem
+import warnings
+
+warnings.warn(
+    "Importing from utils.preferences is deprecated. "
+    "Use 'from tracking.preferences import PreferencesLearner, PreferenceCategory, PreferenceItem' instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
+
+# Redirect to tracking.preferences
+from tracking.preferences import (
+    PreferencesLearner,
+    PreferenceCategory,
+    PreferenceItem
+)
 
 __all__ = [
-    'FamilyTracking',
-    'FamilyMember',
-    'FamilyMemberStatus',
-    'FamilyMemberLocation',
-    'FamilyMemberActivity',
-    'PromisesTracker',
-    'Promise',
-    'Plan',
-    'PromiseStatus',
-    'PlanStatus',
-    'PromiseType',
     'PreferencesLearner',
     'PreferenceCategory',
-    'PreferenceItem',
+    'PreferenceItem'
 ]
