@@ -3,7 +3,7 @@
 """
 =============================================================================
 AMORIA - Virtual Human dengan Jiwa
-Deployment Runner for Railway - With Enhanced Error Logging
+Deployment Runner for Railway - With Webhook & Health Check
 =============================================================================
 """
 
@@ -12,6 +12,7 @@ import sys
 import asyncio
 import traceback
 from pathlib import Path
+from aiohttp import web
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -26,6 +27,9 @@ print_startup_banner()
 try:
     from config import settings
     from utils.logger import setup_logging
+    from bot.application import create_application
+    from bot.webhook import setup_webhook_sync, setup_polling
+    from database.migrate import run_migrations
 except Exception as e:
     error_logger.log_error(e, {'stage': 'import_modules'}, severity="CRITICAL")
     sys.exit(1)
@@ -109,9 +113,6 @@ def run_migration() -> bool:
     log_info("=" * 60)
     
     try:
-        from database.migrate import run_migrations
-        import asyncio
-        
         success = asyncio.run(run_migrations())
         
         if success:
@@ -126,17 +127,76 @@ def run_migration() -> bool:
         return False
 
 
-def start_bot() -> bool:
-    """Start the bot with error handling"""
+async def health_handler(request):
+    """Health check endpoint"""
+    return web.json_response({
+        "status": "healthy",
+        "bot": "AMORIA",
+        "version": "9.9.0",
+        "timestamp": __import__('datetime').datetime.now().isoformat()
+    })
+
+
+async def root_handler(request):
+    """Root endpoint"""
+    return web.json_response({
+        "name": "AMORIA",
+        "description": "Virtual Human dengan Jiwa",
+        "version": "9.9.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "webhook": "/webhook"
+        }
+    })
+
+
+async def webhook_handler(request):
+    """Webhook endpoint untuk Telegram"""
+    try:
+        from main import AmoriaBot
+        bot = AmoriaBot()
+        await bot.init_application()
+        
+        update_data = await request.json()
+        log_info(f"📨 Received webhook update: {update_data.get('update_id', 'unknown')}")
+        
+        # Process update
+        from telegram import Update
+        update = Update.de_json(update_data, bot.application.bot)
+        asyncio.create_task(bot.application.process_update(update))
+        
+        return web.Response(text='OK', status=200)
+        
+    except Exception as e:
+        error_logger.log_error(e, {'stage': 'webhook_handler'})
+        return web.Response(text='Error', status=500)
+
+
+def start_web_server():
+    """Start aiohttp web server with all endpoints"""
     log_info("\n" + "=" * 60)
-    log_info("🚀 STARTING AMORIA ON RAILWAY")
+    log_info("🌐 STARTING WEB SERVER")
+    log_info("=" * 60)
+    
+    port = int(os.getenv('PORT', 8080))
+    
+    app = web.Application()
+    app.router.add_get('/', root_handler)
+    app.router.add_get('/health', health_handler)
+    app.router.add_post('/webhook', webhook_handler)
+    
+    web.run_app(app, host='0.0.0.0', port=port)
+
+
+def start_bot_with_polling():
+    """Start bot with polling mode (fallback jika webhook tidak bisa)"""
+    log_info("\n" + "=" * 60)
+    log_info("🚀 STARTING AMORIA WITH POLLING MODE")
     log_info("=" * 60)
     
     try:
         from main import main
-        import asyncio
-        
-        log_info("📡 Calling main() function...")
         asyncio.run(main())
         return True
         
@@ -163,7 +223,7 @@ def main():
 ║     • Checking environment variables                           ║
 ║     • Creating directories                                      ║
 ║     • Running database migration                                ║
-║     • Starting bot with error logging                           ║
+║     • Starting web server with webhook endpoint                 ║
 ║                                                                  ║
 ╚══════════════════════════════════════════════════════════════════╝
     """)
@@ -177,19 +237,17 @@ def main():
     if not run_migration():
         log_warning("Migration failed, but continuing...")
     
-    # Step 3: Start bot
+    # Step 3: Start web server (with webhook endpoint)
     log_info("\n" + "=" * 60)
-    log_info("🚀 STARTING BOT ON RAILWAY...")
-    log_info("📡 All errors will be logged to Railway console")
+    log_info("🌐 STARTING WEB SERVER WITH WEBHOOK ENDPOINT...")
+    log_info("📡 Endpoints:")
+    log_info("   • GET  /         - API Info")
+    log_info("   • GET  /health   - Health Check")
+    log_info("   • POST /webhook  - Telegram Webhook")
     log_info("=" * 60)
     
-    success = start_bot()
-    
-    if not success:
-        log_error("❌ Bot failed to start!")
-        sys.exit(1)
-    
-    log_info("✅ Bot started successfully!")
+    # Start web server (blocking)
+    start_web_server()
 
 
 if __name__ == "__main__":
