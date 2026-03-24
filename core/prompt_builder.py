@@ -41,7 +41,9 @@ class PromptBuilder:
         spatial_awareness: Any,
         mood_system: Any,
         intent_analysis: Dict,
-        relevant_memories: List[Dict] = None
+        relevant_memories: List[Dict] = None,
+        current_time: str = "",     # 🔥 TAMBAH DI SINI
+        time_feel: str = ""         # 🔥 TAMBAH DI SINI
     ) -> str:
         """
         Bangun prompt dinamis dengan semua konteks realism 9.9
@@ -54,6 +56,48 @@ class PromptBuilder:
             "╚" + "═" * 70 + "╝",
             "",
         ]
+
+        # 🔥 FIX WAJIB (ANTI ERROR STATE NONE / NULL)
+        time_now = current_time or getattr(state.time, "current", "08:00")
+        feel_now = time_feel or getattr(state.time, "get_time_feel", lambda: "netral")()
+
+        # 🔥 BATASI PANJANG BIAR UI GAK PECAH
+        time_now = str(time_now)[:10]
+        feel_now = str(feel_now)[:50]
+
+        lines.extend([
+            "╔" + "═" * 70 + "╗",
+            "║" + " " * 26 + "🕐 WAKTU SAAT INI" + " " * 33 + "║",
+            "╠" + "═" * 70 + "╣",
+            f"║ Jam: {time_now}{' ' * max(0, 61 - len(time_now))}║",
+            f"║ Suasana: {feel_now}{' ' * max(0, 56 - len(feel_now))}║",
+            "╚" + "═" * 70 + "╝",
+            "",
+        ])
+
+        # 🔥 NARASI WAKTU (CLEAN & HUMAN)
+        lines.append(
+            f"Saat ini waktu menunjukkan {time_now}, dengan suasana {feel_now}."
+        )
+
+        lines.append(
+            "Perasaan ini secara alami mempengaruhi nada bicara, respon emosi, dan energi interaksi bot."
+        )
+
+        lines.append(
+            "Bot tidak menyebutkan waktu secara kaku kecuali relevan, tetapi membiarkan suasana waktu terasa dalam cara berbicara."
+        )
+
+        lines.append(
+            "Suasana ini secara halus mempengaruhi cara bot merespon — "
+            "lebih lembut di malam hari, lebih hangat saat sepi, lebih aktif di siang hari."
+        )
+
+        lines.append(
+            "Respon harus terasa natural, bukan mengikuti aturan secara kaku."
+        )
+
+        lines.append("")
         
         # ===== BOT IDENTITY =====
         lines.append(self._format_bot_identity(bot, registration))
