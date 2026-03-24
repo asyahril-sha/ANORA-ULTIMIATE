@@ -58,7 +58,7 @@ async def _setup_webhook_async(app: Application) -> bool:
         logger.info("✅ Existing webhook deleted")
         
         # Set new webhook
-        secret_token = settings.webhook.secret_token
+        secret_token = getattr(settings.webhook, 'secret_token', None)
         await app.bot.set_webhook(
             url=webhook_url,
             allowed_updates=['message', 'callback_query', 'inline_query'],
