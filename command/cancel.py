@@ -12,28 +12,20 @@ import logging
 from typing import Optional
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ContextTypes, ConversationHandler
+from telegram.ext import ContextTypes, ConversationHandler, CommandHandler, CallbackQueryHandler
 
-from config import settings
 from identity.manager import IdentityManager
 
 logger = logging.getLogger(__name__)
 
 
-# Conversation states untuk cancel
+# Conversation states
 CANCEL_CONFIRM = 1
 
 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Handler untuk /cancel - Batalkan percakapan atau proses yang sedang berlangsung
-    
-    Args:
-        update: Update object dari Telegram
-        context: Context object
-    
-    Returns:
-        ConversationHandler state
     """
     user_id = update.effective_user.id
     user = update.effective_user
@@ -45,7 +37,6 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     
     # Cek apakah ada proses conversation yang sedang berlangsung
     if context.user_data.get('in_conversation'):
-        # Ada conversation aktif, konfirmasi cancel
         keyboard = [
             [InlineKeyboardButton("✅ Ya, Batalkan", callback_data="cancel_confirm_conv"),
              InlineKeyboardButton("❌ Tidak, Lanjutkan", callback_data="cancel_keep")]
@@ -99,13 +90,6 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def cancel_confirm_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Callback untuk konfirmasi pembatalan
-    
-    Args:
-        update: Update object
-        context: Context object
-    
-    Returns:
-        ConversationHandler state
     """
     query = update.callback_query
     await query.answer()
@@ -117,8 +101,6 @@ async def cancel_confirm_callback(update: Update, context: ContextTypes.DEFAULT_
         # Batalkan conversation
         context.user_data.pop('in_conversation', None)
         context.user_data.pop('conversation_data', None)
-        
-        # Clear pending data
         context.user_data.pop('pending_action', None)
         context.user_data.pop('pending_state', None)
         
@@ -175,7 +157,6 @@ async def cancel_confirm_callback(update: Update, context: ContextTypes.DEFAULT_
         )
     
     elif data == "cancel_back":
-        # Kembali ke menu sebelumnya
         await query.edit_message_text(
             "🔙 **Kembali**\n\n"
             "Ketik pesan untuk melanjutkan.",
@@ -188,13 +169,6 @@ async def cancel_confirm_callback(update: Update, context: ContextTypes.DEFAULT_
 async def cancel_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """
     Fallback handler untuk cancel conversation
-    
-    Args:
-        update: Update object
-        context: Context object
-    
-    Returns:
-        ConversationHandler state
     """
     await update.message.reply_text(
         "❌ **Dibatalkan**\n\n"
@@ -206,31 +180,9 @@ async def cancel_fallback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     return ConversationHandler.END
 
 
-def cancel_conversation_handler() -> ConversationHandler:
-    """
-    Buat ConversationHandler untuk cancel command
-    
-    Returns:
-        ConversationHandler untuk cancel
-    """
-    return ConversationHandler(
-        entry_points=[CommandHandler('cancel', cancel_command)],
-        states={
-            CANCEL_CONFIRM: [
-                CallbackQueryHandler(cancel_confirm_callback, pattern='^cancel_'),
-            ],
-        },
-        fallbacks=[CommandHandler('cancel', cancel_fallback)],
-        name="cancel_conversation",
-        persistent=False,
-        per_user=True,
-    )
-
-
 __all__ = [
     'cancel_command',
     'cancel_confirm_callback',
     'cancel_fallback',
-    'cancel_conversation_handler',
     'CANCEL_CONFIRM',
 ]
