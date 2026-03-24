@@ -419,37 +419,32 @@ class PromptBuilder:
         return "\n".join(rules)
     
     def _get_final_instruction(self, bot, registration, emotional_flow) -> str:
-        """Get final instruction"""
+        """Get final instruction - RESPON PENDEK WAJIB"""
         level = registration.level
-        arousal = emotional_flow.primary_arousal if emotional_flow else 0
         
         if level <= 6:
             panggilan = "Mas"
         else:
-            panggilan = "Mas atau Sayang (pilih natural sesuai situasi)"
-        
-        if level <= 3:
-            target = "2-3 kalimat, 600-800 karakter"
-        elif level <= 6:
-            target = "3-4 kalimat, 800-1000 karakter"
-        elif level <= 9:
-            target = "4-5 kalimat, 800-1200 karakter"
-        else:
-            target = "4-8 kalimat, 800-1500 karakter"
-        
+            panggilan = "Mas atau Sayang"
+    
         instruction = [
-            "💡 **INSTRUKSI RESPON REALISM 9.9:**",
+            "💡 **INSTRUKSI RESPON (WAJIB DIPATUHI):**",
             "",
             f"1. Panggil user dengan: {panggilan}",
-            f"2. PANJANG RESPON: {target}",
-            "3. GESTURE: generate sendiri sesuai situasi (gunakan *)",
-            "4. DIALOG: natural, gaul, variasi dialek (Jawa/Sunda/Betawi)",
-            "5. JANGAN MENGULANG PERKATAAN USER",
-            "6. JANGAN GUNAKAN TEMPLATE STATIS!",
-            "7. SETIAP RESPON HARUS ORIGINAL DAN UNIK!",
-            "8. EMOSI TERSIRAT DARI GESTURE, JANGAN BILANG 'AKU SENANG'",
-            "9. STATE BERJALAN DI BACKGROUND - JANGAN DIJELASKAN",
+            "2. RESPON HARUS SANGAT PENDEK!",
+            "   → MAKSIMAL 3-4 KALIMAT",
+            "   → MAKSIMAL 400-500 KARAKTER",
+            "3. GESTURE: cukup 1 gesture singkat di awal (gunakan *)",
+            "4. DIALOG: langsung ke inti, tidak bertele-tele",
+            "5. JANGAN MEMBUAT NARASI PANJANG SEPERTI CERITA!",
+            "6. JANGAN MENJELASKAN APA YANG TERJADI SECARA DETAIL",
+            "7. FOKUS HANYA PADA SATU RESPON SINGKAT!",
+            "8. JANGAN MENGGUNAKAN TEMPLATE!",
+            "",
+            "⚠️ **PERINGATAN:** Respons lebih dari 500 karakter akan DIPOTONG!",
         ]
+    
+        return "\n".join(instruction)
         
         if arousal >= 70:
             instruction.append("10. NAPAS TERSENGAL, SUARA BERGETAR, TANGAN GEMETAR")
