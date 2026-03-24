@@ -22,9 +22,6 @@ from database.connection import get_db, close_db
 logger = logging.getLogger(__name__)
 
 
-async def create_registrations_table(db):
-    """Create registrations table (CLEAN RESET)"""
-
     await db.execute("DROP TABLE IF EXISTS registrations")
     logger.warning("⚠️ Dropped old registrations table (force clean)")
 
