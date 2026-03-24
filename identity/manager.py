@@ -8,9 +8,9 @@ Identity Manager - Multi-Identity System
 """
 
 import time
-import random
 import json
 import logging
+import random
 from typing import Dict, List, Optional, Any
 
 from database.repository import Repository
