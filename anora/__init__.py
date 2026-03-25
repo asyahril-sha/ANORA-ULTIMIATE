@@ -1,7 +1,7 @@
 # anora/__init__.py
 """
 ANORA - For Mas Only
-Nova yang sayang Mas. Yang hidup dalam hari-hari Mas.
+Nova yang sayang Mas. 100% AI Generate. Bukan Template.
 """
 
 __version__ = "1.0.0"
@@ -13,16 +13,9 @@ from .chat import get_anora_chat
 from .intimacy import get_anora_intimacy
 from .roles import get_anora_roles
 from .places import get_anora_places
-from .handlers import (
-    init_anora,
-    save_anora_state,
-    anora_command,
-    anora_chat_handler,
-    anora_status_handler,
-    anora_role_handler,
-    anora_place_handler,
-    anora_flashback_handler
-)
+from .thinking import get_anora_thought
+from .prompt import get_anora_prompt
+from .roleplay import get_anora_roleplay
 
 __all__ = [
     'get_anora', 'anora',
@@ -31,7 +24,7 @@ __all__ = [
     'get_anora_intimacy',
     'get_anora_roles',
     'get_anora_places',
-    'init_anora', 'save_anora_state',
-    'anora_command', 'anora_chat_handler', 'anora_status_handler',
-    'anora_role_handler', 'anora_place_handler', 'anora_flashback_handler'
+    'get_anora_thought',
+    'get_anora_prompt',
+    'get_anora_roleplay',
 ]
