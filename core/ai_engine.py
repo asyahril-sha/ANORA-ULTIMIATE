@@ -193,105 +193,105 @@ class AIEngine:
             elif state.location_bot == 'kamar mandi':
                 arousal_from_state += 5
                 
-        # 🔥 TAMBAHKAN DETEKSI AKTIVITAS DARI USER MESSAGE 🔥
-        user_message_lower = user_message.lower()
+            # 🔥 TAMBAHKAN DETEKSI AKTIVITAS DARI USER MESSAGE 🔥
+            user_message_lower = user_message.lower()
 
-        # Deteksi aktivitas memijat
-        if any(k in user_message_lower for k in ['mijit', 'pijat', 'pijetin', 'urut', 'urutan']):
-            arousal_from_state += 15
-            logger.debug(f"🔍 Massage detected! +15 arousal")
-
-        # Deteksi sentuhan fisik
-        if any(k in user_message_lower for k in ['sentuh', 'pegang', 'raba', 'belai']):
-            arousal_from_state += 10
-            logger.debug(f"🔍 Touch detected! +10 arousal")
-
-        # Deteksi buka pakaian
-        if any(k in user_message_lower for k in ['buka', 'lepas', 'tanggal']):
-            if any(k in user_message_lower for k in ['baju', 'daster', 'bra']):
-                arousal_from_state += 20
-                logger.debug(f"🔍 Clothing removal detected! +20 arousal")
-
-        # 🔥 TAMBAHKAN DETEKSI FILM 18+/21+ 🔥
-        if any(k in user_message_lower for k in ['film', 'nonton', 'video', 'film dewasa', 'film 18', 'film 21', 'blue film', 'bokep']):
-            arousal_from_state += 25
-            logger.debug(f"🔍 Adult film detected! +25 arousal")
-
-        # 🔥 TAMBAHKAN DETEKSI TIDUR BERSAMA 🔥
-        if any(k in user_message_lower for k in ['tidur', 'tiduran', 'bobo', 'istirahat']):
-            if any(k in user_message_lower for k in ['sama', 'bareng', 'bersama', 'kita']):
-                arousal_from_state += 20
-                logger.debug(f"🔍 Sleeping together detected! +20 arousal")
-            elif any(k in user_message_lower for k in ['kamar', 'kasur']):
+            # Deteksi aktivitas memijat
+            if any(k in user_message_lower for k in ['mijit', 'pijat', 'pijetin', 'urut', 'urutan']):
                 arousal_from_state += 15
-                logger.debug(f"🔍 Sleep in same room detected! +15 arousal")
+                logger.debug(f"🔍 Massage detected! +15 arousal")
 
-        # 🔥 TAMBAHKAN DETEKSI TELANJANG / PAKAIAN MINIM 🔥
-        if any(k in user_message_lower for k in ['telanjang', 'bogel', 'bugil']):
-            arousal_from_state += 30
-            logger.debug(f"🔍 Naked detected! +30 arousal")
-        elif any(k in user_message_lower for k in ['boxer', 'celana dalam', 'cd', 'bra', 'daster']):
-            arousal_from_state += 15
-            logger.debug(f"🔍 Minimal clothing detected! +15 arousal")
+            # Deteksi sentuhan fisik
+            if any(k in user_message_lower for k in ['sentuh', 'pegang', 'raba', 'belai']):
+                arousal_from_state += 10
+                logger.debug(f"🔍 Touch detected! +10 arousal")
 
-        # 🔥 TAMBAHKAN DETEKSI DI KASUR 🔥
-        if any(k in user_message_lower for k in ['kasur', 'tempat tidur', 'ranjang']):
-            arousal_from_state += 10
-            logger.debug(f"🔍 On bed detected! +10 arousal")
+            # Deteksi buka pakaian
+            if any(k in user_message_lower for k in ['buka', 'lepas', 'tanggal']):
+                if any(k in user_message_lower for k in ['baju', 'daster', 'bra']):
+                    arousal_from_state += 20
+                    logger.debug(f"🔍 Clothing removal detected! +20 arousal")
 
-        # 🔥 TAMBAHKAN DETEKSI KATA VULGAR 🔥
-        vulgar_keywords = ['horny', 'sange', 'nafsu', 'pengen', 'butuh', 'ingin', 'gairah']
-        if any(k in user_message_lower for k in vulgar_keywords):
-            arousal_from_state += 20
-            logger.debug(f"🔍 Vulgar keyword detected! +20 arousal")
-
-       # 🔥 TAMBAHKAN DETEKSI AKTIVITAS SEKSUAL 🔥
-
-        # 1. Pitting / Grinding (gesekan kelamin)
-        if any(k in user_message_lower for k in ['pitting', 'grinding', 'gesek', 'gesekan', 'goyang', 'gerak', 'naik turun']):
-            if any(k in user_message_lower for k in ['kelamin', 'kontol', 'memek', 'alat kelamin']):
-                arousal_from_state += 45  # Gesekan kelamin langsung
-                logger.debug(f"🔍 Genital grinding detected! +45 arousal")
-            elif any(k in user_message_lower for k in ['pinggul', 'paha', 'bawah']):
-                arousal_from_state += 35
-                logger.debug(f"🔍 Hip grinding detected! +35 arousal")
-            else:
+            # 🔥 TAMBAHKAN DETEKSI FILM 18+/21+ 🔥
+            if any(k in user_message_lower for k in ['film', 'nonton', 'video', 'film dewasa', 'film 18', 'film 21', 'blue film', 'bokep']):
                 arousal_from_state += 25
-                logger.debug(f"🔍 Grinding motion detected! +25 arousal")
+                logger.debug(f"🔍 Adult film detected! +25 arousal")
 
-        # 2. Penetrasi
-        if any(k in user_message_lower for k in ['masuk', 'penetrasi', 'colok', 'masukin', 'dorong']):
-            arousal_from_state += 50
-            logger.debug(f"🔍 Penetration detected! +50 arousal")
+            # 🔥 TAMBAHKAN DETEKSI TIDUR BERSAMA 🔥
+            if any(k in user_message_lower for k in ['tidur', 'tiduran', 'bobo', 'istirahat']):
+                if any(k in user_message_lower for k in ['sama', 'bareng', 'bersama', 'kita']):
+                    arousal_from_state += 20
+                    logger.debug(f"🔍 Sleeping together detected! +20 arousal")
+                elif any(k in user_message_lower for k in ['kamar', 'kasur']):
+                    arousal_from_state += 15
+                    logger.debug(f"🔍 Sleep in same room detected! +15 arousal")
 
-        # 3. Oral seks
-        if any(k in user_message_lower for k in ['hisap', 'jilat', 'oral', 'ngocok', 'ngemut']):
-            arousal_from_state += 40
-            logger.debug(f"🔍 Oral sex detected! +40 arousal")
+            # 🔥 TAMBAHKAN DETEKSI TELANJANG / PAKAIAN MINIM 🔥
+            if any(k in user_message_lower for k in ['telanjang', 'bogel', 'bugil']):
+                arousal_from_state += 30
+                logger.debug(f"🔍 Naked detected! +30 arousal")
+            elif any(k in user_message_lower for k in ['boxer', 'celana dalam', 'cd', 'bra', 'daster']):
+                arousal_from_state += 15
+                logger.debug(f"🔍 Minimal clothing detected! +15 arousal")
 
-        # 4. Climax / orgasme
-        if any(k in user_message_lower for k in ['climax', 'orgasme', 'keluar', 'habis', 'puas', 'puncak', 'cum']):
-            arousal_from_state += 30
-            logger.debug(f"🔍 Climax detected! +30 arousal")
+            # 🔥 TAMBAHKAN DETEKSI DI KASUR 🔥
+            if any(k in user_message_lower for k in ['kasur', 'tempat tidur', 'ranjang']):
+                arousal_from_state += 10
+                logger.debug(f"🔍 On bed detected! +10 arousal")
 
-        # 5. Foreplay / pemanasan
-        if any(k in user_message_lower for k in ['foreplay', 'pemanasan', 'rayu', 'goda', 'buat horny']):
-            arousal_from_state += 20
-            logger.debug(f"🔍 Foreplay detected! +20 arousal")
+            # 🔥 TAMBAHKAN DETEKSI KATA VULGAR 🔥
+            vulgar_keywords = ['horny', 'sange', 'nafsu', 'pengen', 'butuh', 'ingin', 'gairah']
+            if any(k in user_message_lower for k in vulgar_keywords):
+                arousal_from_state += 20
+                logger.debug(f"🔍 Vulgar keyword detected! +20 arousal")
 
-        # 🔥 TAMBAHKAN DETEKSI KATA VULGAR UNTUK AKTIVITAS SEKSUAL 🔥
-        sexual_keywords = ['ngentot', 'ngewe', 'bobo', 'main', 'ml', 'sex',  'memek', 'itil', 'kontol', 'peler','seks']
-        if any(k in user_message_lower for k in sexual_keywords):
-            arousal_from_state += 25
-            logger.debug(f"🔍 Sexual activity keyword detected! +25 arousal")
+           # 🔥 TAMBAHKAN DETEKSI AKTIVITAS SEKSUAL 🔥
+        
+            # 1. Pitting / Grinding (gesekan kelamin)
+            if any(k in user_message_lower for k in ['pitting', 'grinding', 'gesek', 'gesekan', 'goyang', 'gerak', 'naik turun']):
+                if any(k in user_message_lower for k in ['kelamin', 'kontol', 'memek', 'alat kelamin']):
+                    arousal_from_state += 45  # Gesekan kelamin langsung
+                    logger.debug(f"🔍 Genital grinding detected! +45 arousal")
+                elif any(k in user_message_lower for k in ['pinggul', 'paha', 'bawah']):
+                    arousal_from_state += 35
+                    logger.debug(f"🔍 Hip grinding detected! +35 arousal")
+                else:
+                    arousal_from_state += 25
+                    logger.debug(f"🔍 Grinding motion detected! +25 arousal")
 
-        # Batasi arousal dari state maksimal 90 (biar masih ada ruang untuk climax dari stimulus lain)
-        arousal_from_state = min(arousal_from_state, 90)
+            # 2. Penetrasi
+            if any(k in user_message_lower for k in ['masuk', 'penetrasi', 'colok', 'masukin', 'dorong']):
+                arousal_from_state += 50
+                logger.debug(f"🔍 Penetration detected! +50 arousal")
 
-        # Update user arousal berdasarkan pesan
-        if arousal_from_state > 20:
-            self.user.arousal = min(100, self.user.arousal + (arousal_from_state // 10))
-            logger.debug(f"👤 User arousal updated: {self.user.arousal}%")
+            # 3. Oral seks
+            if any(k in user_message_lower for k in ['hisap', 'jilat', 'oral', 'ngocok', 'ngemut']):
+                arousal_from_state += 40
+                logger.debug(f"🔍 Oral sex detected! +40 arousal")
+
+            # 4. Climax / orgasme
+            if any(k in user_message_lower for k in ['climax', 'orgasme', 'keluar', 'habis', 'puas', 'puncak', 'cum']):
+                arousal_from_state += 30
+                logger.debug(f"🔍 Climax detected! +30 arousal")
+
+            # 5. Foreplay / pemanasan
+            if any(k in user_message_lower for k in ['foreplay', 'pemanasan', 'rayu', 'goda', 'buat horny']):
+                arousal_from_state += 20
+                logger.debug(f"🔍 Foreplay detected! +20 arousal")
+
+            # 🔥 TAMBAHKAN DETEKSI KATA VULGAR UNTUK AKTIVITAS SEKSUAL 🔥
+            sexual_keywords = ['ngentot', 'ngewe', 'bobo', 'main', 'ml', 'sex',  'memek', 'itil', 'kontol', 'peler','seks']
+            if any(k in user_message_lower for k in sexual_keywords):
+                arousal_from_state += 25
+                logger.debug(f"🔍 Sexual activity keyword detected! +25 arousal")
+
+            # Batasi arousal dari state maksimal 90 (biar masih ada ruang untuk climax dari stimulus lain)
+            arousal_from_state = min(arousal_from_state, 90)
+
+            # Update user arousal berdasarkan pesan
+            if arousal_from_state > 20:
+                self.user.arousal = min(100, self.user.arousal + (arousal_from_state // 10))
+                logger.debug(f"👤 User arousal updated: {self.user.arousal}%")
         
         # ===== 4. UPDATE EMOTIONAL FLOW =====
         user_arousal = self.user.arousal if hasattr(self.user, 'arousal') else 0
