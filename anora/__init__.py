@@ -14,8 +14,7 @@ from .roleplay_ai import get_anora_roleplay_ai
 from .roleplay_integration import get_anora_roleplay
 from .location_manager import get_anora_location, LocationType, LocationDetail
 from .chat import get_anora_chat
-from .roles import get_anora_roles
-from .intimacy import get_anora_intimacy
+from .roles import get_anora_roles, RoleType
 
 __all__ = [
     'get_anora', 'anora',
@@ -25,6 +24,5 @@ __all__ = [
     'get_anora_roleplay',
     'get_anora_location', 'LocationType', 'LocationDetail',
     'get_anora_chat',
-    'get_anora_roles',
-    'get_anora_intimacy',
+    'get_anora_roles', 'RoleType',
 ]
