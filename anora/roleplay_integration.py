@@ -467,7 +467,7 @@ Kirim **/batal** buat balik ke mode chat.
         
         # ========== UPDATE AROUSAL DARI OBROLAN (BARU!) ==========
         # Ini dilakukan di ai.process juga, tapi kita update juga di sini untuk konsistensi
-        self.ai.arousal.add_from_conversation(pesan_mas, self.brain.relationship.level
+        self.ai.arousal.add_from_conversation(pesan_mas, self.brain.relationship.level)
                                              
         # ========== TAMBAHKAN INI ==========
         # Sync arousal dari ai ke brain feelings
