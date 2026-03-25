@@ -41,6 +41,43 @@ from telegram.ext import (
 )
 
 # =============================================================================
+# IMPORT ANORA COMPONENTS - WITH DEBUG
+# =============================================================================
+
+ANORA_AVAILABLE = False
+try:
+    import sys
+    import os
+    print(f"Python path: {sys.path}")
+    print(f"Current directory: {os.getcwd()}")
+    print("Checking for anora directory...")
+    
+    if os.path.exists("anora"):
+        print("✅ anora directory exists")
+        print(f"Files in anora: {os.listdir('anora')}")
+    else:
+        print("❌ anora directory NOT found!")
+    
+    # Try to import
+    from anora.core import get_anora
+    from anora.brain import get_anora_brain
+    from anora.chat import get_anora_chat
+    from anora.roles import get_anora_roles, RoleType
+    from anora.places import get_anora_places
+    from anora.location_manager import get_anora_location, LocationType, LocationDetail
+    from anora.memory_persistent import get_anora_persistent
+    from anora.roleplay_integration import get_anora_roleplay
+    
+    ANORA_AVAILABLE = True
+    print("✅ ANORA modules loaded successfully")
+    
+except Exception as e:
+    print(f"❌ ANORA import error: {e}")
+    import traceback
+    traceback.print_exc()
+    ANORA_AVAILABLE = False
+    
+# =============================================================================
 # IMPORT ANORA COMPONENTS
 # =============================================================================
 
