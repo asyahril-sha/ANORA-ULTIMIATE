@@ -141,6 +141,7 @@ class AIEngine:
 
         # 🔥 SAFETY: kalau state belum ada
         if not state:
+            from database.models import StateTracker
             state = StatePersistence(registration_id=self.registration.id)
 
         # 🔥 TIME SYSTEM (REALISTIC)
