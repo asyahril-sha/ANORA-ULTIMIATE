@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class AnoraDatabase:
-    """Database khusus Nova. Nyimpen memory personal dan state."""
+    """Database khusus Nova."""
     
     def __init__(self, db_path: Path = Path("data/anora.db")):
         self.db_path = db_path
@@ -25,7 +25,6 @@ class AnoraDatabase:
         """Buat tabel kalo belum ada."""
         self._conn = await aiosqlite.connect(str(self.db_path))
         
-        # Tabel memory Nova
         await self._conn.execute('''
             CREATE TABLE IF NOT EXISTS anora_memory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +36,6 @@ class AnoraDatabase:
             )
         ''')
         
-        # Tabel state Nova
         await self._conn.execute('''
             CREATE TABLE IF NOT EXISTS anora_state (
                 key TEXT PRIMARY KEY,
@@ -46,7 +44,6 @@ class AnoraDatabase:
             )
         ''')
         
-        # Tabel tempat yang pernah dikunjungi
         await self._conn.execute('''
             CREATE TABLE IF NOT EXISTS anora_places (
                 id TEXT PRIMARY KEY,
@@ -57,13 +54,10 @@ class AnoraDatabase:
         ''')
         
         await self._conn.commit()
-        
-        # Init state kalo belum ada
         await self._init_state()
         logger.info(f"✅ ANORA database initialized at {self.db_path}")
     
     async def _init_state(self):
-        """Init state awal Nova."""
         defaults = {
             'sayang': '50',
             'rindu': '0',
@@ -85,9 +79,7 @@ class AnoraDatabase:
         await self._conn.commit()
     
     async def get_state(self, key: str) -> Optional[str]:
-        cursor = await self._conn.execute(
-            "SELECT value FROM anora_state WHERE key = ?", (key,)
-        )
+        cursor = await self._conn.execute("SELECT value FROM anora_state WHERE key = ?", (key,))
         row = await cursor.fetchone()
         return row[0] if row else None
     
@@ -150,31 +142,11 @@ class AnoraDatabase:
             return dict(random.choice(rows))
         return None
     
-    async def record_place_visit(self, place_id: str, nama: str):
-        now = time.time()
-        await self._conn.execute(
-            """INSERT INTO anora_places (id, nama, visit_count, last_visit) 
-               VALUES (?, ?, 1, ?) 
-               ON CONFLICT(id) DO UPDATE SET 
-               visit_count = visit_count + 1, 
-               last_visit = ?""",
-            (place_id, nama, now, now)
-        )
-        await self._conn.commit()
-    
-    async def get_place_visits(self, place_id: str) -> int:
-        cursor = await self._conn.execute(
-            "SELECT visit_count FROM anora_places WHERE id = ?", (place_id,)
-        )
-        row = await cursor.fetchone()
-        return row[0] if row else 0
-    
     async def close(self):
         if self._conn:
             await self._conn.close()
 
 
-# Instance global
 _anora_db: Optional[AnoraDatabase] = None
 
 
