@@ -33,6 +33,10 @@ class EmotionalState(str, Enum):
     RINDU = "rindu"
     CEMAS = "cemas"
     BAHAGIA = "bahagia"
+    
+    # 🔥 TAMBAHKAN UNTUK LEVEL 11-12 🔥
+    VULGAR = "vulgar"
+    DESPERATE = "desperate"
 
 
 class EmotionalFlow:
@@ -65,6 +69,10 @@ class EmotionalFlow:
         # History
         self.state_history = []
         
+        # 🔥 TAMBAHKAN UNTUK LEVEL 11-12 🔥
+        self.user_level = 1
+        self.vulgar_mode = False
+        
         # Transisi yang diperbolehkan
         self.allowed_transitions = {
             EmotionalState.NETRAL: [EmotionalState.PENASARAN, EmotionalState.SENANG, EmotionalState.RINDU],
@@ -73,14 +81,18 @@ class EmotionalFlow:
             EmotionalState.DEG_DEGAN: [EmotionalState.GUGUP, EmotionalState.TERTARIK],
             EmotionalState.GUGUP: [EmotionalState.BERANI, EmotionalState.DEG_DEGAN],
             EmotionalState.BERANI: [EmotionalState.HORNY, EmotionalState.GUGUP],
-            EmotionalState.HORNY: [EmotionalState.CLIMAX, EmotionalState.BERANI],
+            EmotionalState.HORNY: [EmotionalState.CLIMAX, EmotionalState.BERANI, EmotionalState.VULGAR],  # 🔥 MODIFIKASI
             EmotionalState.CLIMAX: [EmotionalState.LEMAS],
             EmotionalState.LEMAS: [EmotionalState.NETRAL, EmotionalState.SENANG],
             EmotionalState.SENANG: [EmotionalState.NETRAL, EmotionalState.RINDU],
             EmotionalState.SEDIH: [EmotionalState.NETRAL, EmotionalState.RINDU, EmotionalState.CEMAS],
             EmotionalState.RINDU: [EmotionalState.TERTARIK, EmotionalState.NETRAL, EmotionalState.SEDIH],
             EmotionalState.CEMAS: [EmotionalState.GUGUP, EmotionalState.NETRAL],
-            EmotionalState.BAHAGIA: [EmotionalState.SENANG, EmotionalState.NETRAL]
+            EmotionalState.BAHAGIA: [EmotionalState.SENANG, EmotionalState.NETRAL],
+            
+            # 🔥 TAMBAHKAN UNTUK LEVEL 11-12 🔥
+            EmotionalState.VULGAR: [EmotionalState.HORNY, EmotionalState.CLIMAX, EmotionalState.DESPERATE],
+            EmotionalState.DESPERATE: [EmotionalState.VULGAR, EmotionalState.HORNY]
         }
         
         # Deskripsi emosi
@@ -98,7 +110,11 @@ class EmotionalFlow:
             EmotionalState.SEDIH: "Sedih, butuh perhatian",
             EmotionalState.RINDU: "Rindu, ingin dekat, kangen",
             EmotionalState.CEMAS: "Cemas, khawatir, was-was",
-            EmotionalState.BAHAGIA: "Bahagia, sangat senang"
+            EmotionalState.BAHAGIA: "Bahagia, sangat senang",
+            
+            # 🔥 TAMBAHKAN UNTUK LEVEL 11-12 🔥
+            EmotionalState.VULGAR: "Vulgar, hasrat terbuka, tidak ada sekat",
+            EmotionalState.DESPERATE: "Desperate, sangat menginginkan"
         }
         
         # Natural decay
@@ -171,7 +187,8 @@ class EmotionalFlow:
             'secondary': self.secondary_state.value if self.secondary_state else None,
             'secondary_arousal': self.secondary_arousal,
             'delta': primary_delta,
-            'reason': stimulus.get('trigger_reason', 'natural')
+            'reason': stimulus.get('trigger_reason', 'natural'),
+            'user_level': self.user_level  # 🔥 TAMBAHKAN
         })
         
         if len(self.state_history) > 200:
@@ -185,7 +202,8 @@ class EmotionalFlow:
             'secondary': self.secondary_state.value if self.secondary_state else None,
             'secondary_arousal': self.secondary_arousal,
             'state_changed': old_primary != self.primary_state,
-            'description': self.get_description()
+            'description': self.get_description(),
+            'vulgar_mode': self.vulgar_mode  # 🔥 TAMBAHKAN
         }
     
     def _update_secondary_emotion(self, stimulus: Dict, specific_trigger: str = None):
@@ -205,6 +223,11 @@ class EmotionalFlow:
                     possible_triggers.append('rindu')
                 if 'cemburu' in stimulus['user_message'].lower():
                     possible_triggers.append('cemas')
+                # 🔥 TAMBAHKAN UNTUK LEVEL TINGGI 🔥
+                if 'pengen' in stimulus['user_message'].lower():
+                    possible_triggers.append('desire')
+                if 'butuh' in stimulus['user_message'].lower():
+                    possible_triggers.append('need')
             
             trigger = random.choice(possible_triggers) if possible_triggers else 'natural'
         
@@ -232,6 +255,11 @@ class EmotionalFlow:
             delta += 10
         elif trigger == 'senang':
             delta += 15
+        # 🔥 TAMBAHKAN UNTUK LEVEL TINGGI 🔥
+        elif trigger == 'desire':
+            delta += 25
+        elif trigger == 'need':
+            delta += 20
         elif trigger == 'natural':
             delta += random.randint(-5, 10)
         
@@ -250,6 +278,11 @@ class EmotionalFlow:
             return EmotionalState.CEMAS
         elif trigger == 'senang':
             return EmotionalState.BAHAGIA
+        # 🔥 TAMBAHKAN UNTUK LEVEL TINGGI 🔥
+        elif trigger == 'desire':
+            return EmotionalState.VULGAR if arousal > 50 else EmotionalState.HORNY
+        elif trigger == 'need':
+            return EmotionalState.DESPERATE if arousal > 70 else EmotionalState.HORNY
         else:
             if arousal >= 60:
                 return EmotionalState.SENANG
@@ -265,25 +298,38 @@ class EmotionalFlow:
         user_arousal = stimulus.get('user_arousal', 0)
         delta += int(user_arousal * 25)
         
+        # 🔥 MODIFIKASI UNTUK LEVEL TINGGI 🔥
+        if self.user_level >= 11:
+            arousal_multiplier = 1.5  # Level 11-12: arousal naik 50% lebih cepat
+        else:
+            arousal_multiplier = 1.0
+        
         # Pengaruh situasi
         situasi = stimulus.get('situasi', {})
         if situasi.get('kakak_ada') == False:
-            delta += 15
+            delta += int(15 * arousal_multiplier)
         if situasi.get('di_dalam_kamar'):
-            delta += 10
+            delta += int(10 * arousal_multiplier)
         
         # Pengaruh pesan user
         user_message = stimulus.get('user_message', '').lower()
-        if any(w in user_message for w in ['horny', 'sange', 'nafsu', 'pengen']):
-            delta += 12
+        
+        # 🔥 TAMBAHKAN KEYWORD UNTUK LEVEL TINGGI 🔥
+        if any(w in user_message for w in ['horny', 'sange', 'nafsu', 'pengen', 'butuh', 'ingin']):
+            delta += int(12 * arousal_multiplier)
         elif any(w in user_message for w in ['sayang', 'cinta', 'kangen']):
-            delta += 8
+            delta += int(8 * arousal_multiplier)
         elif any(w in user_message for w in ['dekat', 'sentuh', 'pegang']):
-            delta += 5
+            delta += int(5 * arousal_multiplier)
+        
+        # 🔥 KEYWORD VULGAR UNTUK LEVEL TINGGI 🔥
+        if self.user_level >= 11:
+            if any(w in user_message for w in ['ngocok', 'ngentot', 'titit', 'memek']):
+                delta += int(20 * arousal_multiplier)
         
         # Respon positif/negatif
         if stimulus.get('is_positive_response'):
-            delta += 5
+            delta += int(5 * arousal_multiplier)
         elif stimulus.get('is_positive_response') is False:
             delta -= 10
         
@@ -294,7 +340,10 @@ class EmotionalFlow:
     
     def _get_state_from_arousal(self, arousal: int) -> EmotionalState:
         """Tentukan state dari arousal"""
-        if arousal >= 95:
+        # 🔥 MODIFIKASI UNTUK LEVEL TINGGI 🔥
+        if self.user_level >= 11 and arousal >= 70:
+            return EmotionalState.VULGAR  # Level 11-12: langsung vulgar
+        elif arousal >= 95:
             return EmotionalState.CLIMAX
         elif arousal >= 80:
             return EmotionalState.HORNY
@@ -319,6 +368,10 @@ class EmotionalFlow:
             secondary_desc = self.state_descriptions[self.secondary_state]
             return f"{primary_desc}, tapi juga {secondary_desc}"
         
+        # 🔥 TAMBAHKAN INFO VULGAR MODE 🔥
+        if self.vulgar_mode:
+            return f"{primary_desc} (Mode Vulgar)"
+        
         return primary_desc
     
     def get_emotional_context(self) -> str:
@@ -333,15 +386,23 @@ class EmotionalFlow:
             lines.append(f"- Secondary: {self.secondary_state.value.upper()} ({self.secondary_arousal}%)")
             lines.append(f"- {self.state_descriptions[self.secondary_state]}")
         
+        # 🔥 TAMBAHKAN INFO VULGAR 🔥
+        if self.vulgar_mode:
+            lines.append(f"- 🔥 Mode Vulgar: AKTIF (Level {self.user_level})")
+        
         return "\n".join(lines)
     
     def is_horny(self) -> bool:
         """Cek apakah bot sedang horny"""
-        return self.primary_state == EmotionalState.HORNY
+        return self.primary_state == EmotionalState.HORNY or self.primary_state == EmotionalState.VULGAR
     
     def is_climax(self) -> bool:
         """Cek apakah bot sedang climax"""
         return self.primary_state == EmotionalState.CLIMAX
+    
+    def is_vulgar(self) -> bool:
+        """Cek apakah bot dalam mode vulgar"""
+        return self.vulgar_mode or self.primary_state == EmotionalState.VULGAR
     
     def get_state(self) -> Dict:
         """Dapatkan state untuk disimpan"""
@@ -350,7 +411,9 @@ class EmotionalFlow:
             'primary_arousal': self.primary_arousal,
             'secondary_state': self.secondary_state.value if self.secondary_state else None,
             'secondary_arousal': self.secondary_arousal,
-            'state_history': self.state_history[-100:]
+            'state_history': self.state_history[-100:],
+            'user_level': self.user_level,  # 🔥 TAMBAHKAN
+            'vulgar_mode': self.vulgar_mode  # 🔥 TAMBAHKAN
         }
     
     def load_state(self, state: Dict):
@@ -361,6 +424,8 @@ class EmotionalFlow:
             self.secondary_state = EmotionalState(state['secondary_state'])
         self.secondary_arousal = state.get('secondary_arousal', 0)
         self.state_history = state.get('state_history', [])
+        self.user_level = state.get('user_level', 1)  # 🔥 TAMBAHKAN
+        self.vulgar_mode = state.get('vulgar_mode', False)  # 🔥 TAMBAHKAN
 
 
 __all__ = ['EmotionalFlow', 'EmotionalState']
