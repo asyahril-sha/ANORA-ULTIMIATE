@@ -1,423 +1,422 @@
 # anora/brain.py
 """
-BRAIN OF NOVA - 100% Human
-Bukan AI Assistant. Bukan Template. Tapi Nova yang hidup.
+ANORA Brain - Otak Nova yang hidup.
+Bukan cuma memory pesan. Tapi timeline, state, perasaan, konsistensi.
 """
 
 import time
-import random
 import json
-import openai
-import aiosqlite
-import asyncio
-from pathlib import Path
-from typing import Dict, List, Optional
+import logging
+from typing import Dict, List, Optional, Any
 from datetime import datetime
-
-from .core import get_anora
-from config import settings
 
 logger = logging.getLogger(__name__)
 
 
-class HumanBrain:
+class TimelineEvent:
+    """Satu kejadian dalam timeline Nova"""
+    
+    def __init__(self, 
+                 kejadian: str,
+                 lokasi_nova: str,
+                 lokasi_mas: str,
+                 aktivitas_nova: str,
+                 aktivitas_mas: str,
+                 perasaan_nova: str,
+                 pakaian_nova: Dict,
+                 pakaian_mas: Dict,
+                 pesan_mas: str = "",
+                 pesan_nova: str = ""):
+        
+        self.timestamp = time.time()
+        self.kejadian = kejadian
+        self.lokasi_nova = lokasi_nova
+        self.lokasi_mas = lokasi_mas
+        self.aktivitas_nova = aktivitas_nova
+        self.aktivitas_mas = aktivitas_mas
+        self.perasaan_nova = perasaan_nova
+        self.pakaian_nova = pakaian_nova
+        self.pakaian_mas = pakaian_mas
+        self.pesan_mas = pesan_mas
+        self.pesan_nova = pesan_nova
+    
+    def to_dict(self) -> Dict:
+        return {
+            'timestamp': self.timestamp,
+            'waktu': datetime.fromtimestamp(self.timestamp).strftime("%H:%M:%S"),
+            'kejadian': self.kejadian,
+            'lokasi_nova': self.lokasi_nova,
+            'lokasi_mas': self.lokasi_mas,
+            'aktivitas_nova': self.aktivitas_nova,
+            'aktivitas_mas': self.aktivitas_mas,
+            'perasaan_nova': self.perasaan_nova,
+            'pakaian_nova': self.pakaian_nova,
+            'pakaian_mas': self.pakaian_mas,
+            'pesan_mas': self.pesan_mas[:100] if self.pesan_mas else "",
+            'pesan_nova': self.pesan_nova[:100] if self.pesan_nova else ""
+        }
+
+
+class AnoraBrain:
     """
-    Otak Nova. Bukan AI Assistant. Tapi manusia.
-    Punya ingatan. Punya perasaan. Punya keinginan.
+    Otak Nova. Menyimpan timeline, state, memory.
+    Bukan cuma pesan, tapi semua aspek kejadian.
     """
     
     def __init__(self):
-        self.anora = get_anora()
-        self.db_path = Path("data/anora_brain.db")
-        self._conn = None
-        self._client = None
+        # Timeline semua kejadian (berurutan)
+        self.timeline: List[TimelineEvent] = []
         
-        # KOSAKATA VULGAR (untuk level 11-12)
-        self.vulgar_words = {
-            'kontol': ['kontol', 'kontol Mas', 'batang Mas', 'yang keras itu', 'itu'],
-            'memek': ['memek', 'memek Nova', 'dalem', 'situ', 'basah', 'liang Nova'],
-            'ngentot': ['ngentot', 'main', 'berhubungan', 'nyatu', 'masuk', 'bobok'],
-            'crot': ['crot', 'keluar', 'lepas', 'tumpah', 'hangat', 'sperma'],
-            'horny': ['horny', 'sange', 'nafsu', 'pengen', 'haus', 'gatal', 'panas'],
-            'climax': ['climax', 'puncak', 'keluar', 'habis', 'puas', 'mati', 'orgasme'],
-            'hisap': ['hisap', 'jilat', 'ngemut', 'ngocok', 'mainin'],
-            'jilat': ['jilat', 'jilatin', 'liatin', 'basahin'],
-            'pantat': ['pantat', 'bokong', 'belakang'],
-            'dada': ['dada', 'payudara', 'tete', 'buah dada', 'buah hati'],
-            'paha': ['paha', 'paha dalem', 'paha dalam'],
+        # Short-term memory (sliding window, 50 terakhir)
+        self.short_term: List[TimelineEvent] = []
+        self.short_term_max = 50
+        
+        # Long-term memory (permanen)
+        self.long_term: Dict = {
+            'kebiasaan_mas': [],      # [{'kebiasaan': 'suka kopi latte', 'dari_kapan': timestamp}]
+            'momen_penting': [],      # [{'momen': 'pertama pegang tangan', 'waktu': timestamp, 'perasaan': 'gemeteran'}]
+            'janji': [],              # [{'janji': 'besok main lagi', 'dari': 'mas', 'status': 'pending'}]
+            'rencana': [],           # [{'rencana': 'makan bakso bareng', 'waktu': timestamp}]
         }
         
-        # DESAHAN YANG BIKIN MAS CLIMAX
-        self.moans = {
-            'awal': [
-                "Ahh... Mas...",
-                "Hmm... *napas mulai berat*",
-                "Uh... Mas... pelan-pelan...",
-                "Hhngg... *gigit bibir*",
-                "Aduh... Mas...",
-                "Nggg... *tangan ngeremas sprei*",
-            ],
-            'tengah': [
-                "Ahh... uhh... dalem... dalem lagi, Mas...",
-                "Aahh! s-sana... di sana...",
-                "Hhngg... jangan berhenti, Mas...",
-                "Uhh... rasanya... enak banget...",
-                "Aahh... kontol Mas... dalem banget...",
-                "Uhh... memek Nova... ngenceng sendiri...",
-            ],
-            'menjelang': [
-                "Mas... aku... aku udah mau climax...",
-                "Kencengin dikit lagi, Mas... please...",
-                "Ahh! udah... udah mau...",
-                "Mas... ikut... ikut ya...",
-                "Aahh... Mas... keluarin... keluarin...",
-                "Uhh... aku mau... mau climax...",
-            ],
-            'climax': [
-                "Ahhh!! Mas!! udah... udah climax... uhh...",
-                "Aahh... keluar... keluar semua, Mas...",
-                "Uhh... lemes... *napas tersengal*",
-                "Ahh... enak banget, Mas...",
-                "Aahh... sperma Mas... hangat banget...",
-                "Uhh... aku... aku orgasme, Mas...",
-            ]
+        # Current state (saat ini)
+        self.state = {
+            'lokasi_nova': 'dapur',
+            'lokasi_mas': 'pintu',
+            'aktivitas_nova': 'lagi masak sop',
+            'aktivitas_mas': 'baru dateng',
+            'pakaian_nova': {
+                'top': 'daster rumah motif bunga',
+                'bottom': None,
+                'hijab': True,
+                'bra': True,
+                'inner': True
+            },
+            'pakaian_mas': {
+                'top': 'kaos',
+                'bottom': 'celana jeans',
+                'underwear': True
+            },
+            'mood_nova': 'gugup tapi seneng',
+            'mood_mas': 'netral',
+            'waktu_masuk': time.time(),
+            'waktu_terakhir_update': time.time()
         }
         
-        # TEMPAT CLIMAX YANG BISA DIMINTA
-        self.climax_spots = {
-            'dalam': 'dalem aja, Mas... aku mau ngerasain hangatnya dalem memek Nova...',
-            'luar': 'di luar, Mas... biar Nova liat...',
-            'muka': 'di muka Nova, Mas... biar Nova rasain di pipi...',
-            'mulut': 'di mulut... aku mau ngerasain rasanya...',
-            'dada': 'di dada... biar Nova usap-usap...',
-            'perut': 'di perut... biar Nova liat putihnya...',
-            'pantat': 'di pantat... biar Nova rasain hangatnya di belakang...',
-            'paha': 'di paha... biar Nova liat...',
+        # Perasaan Nova (diupdate tiap interaksi)
+        self.feelings = {
+            'sayang': 50.0,
+            'rindu': 0.0,
+            'desire': 0.0,
+            'arousal': 0.0,
+            'tension': 0.0
         }
         
-        # POSISI YANG BISA DIMINTA NOVA
-        self.positions = [
-            {"name": "missionary", "desc": "Mas di atas, Nova di bawah, kaki terbuka lebar", "nova_request": "Mas... di atas Nova... *buka kaki*"},
-            {"name": "cowgirl", "desc": "Nova di atas, Mas di bawah", "nova_request": "Mas... biar Nova yang gerakin... *naik ke pangkuan*"},
-            {"name": "doggy", "desc": "Nova merangkak, Mas dari belakang", "nova_request": "Mas... dari belakang aja... *merangkak*"},
-            {"name": "spooning", "desc": "Berbaring miring, Mas dari belakang", "nova_request": "Mas... peluk Nova dari belakang... *nyender*"},
-            {"name": "standing", "desc": "Berdiri, Nova depan tembok", "nova_request": "Mas... di tembok aja... *nempel ke tembok*"},
-            {"name": "sideways", "desc": "Nova miring, Mas dari samping", "nova_request": "Mas... miring gini aja... *baring miring*"},
-        ]
+        # Level dan hubungan
+        self.relationship = {
+            'level': 1,
+            'intimacy_count': 0,
+            'climax_count': 0,
+            'first_kiss': False,
+            'first_touch': False,
+            'first_hug': False,
+            'first_intim': False
+        }
         
-        # SETELAH CLIMAX (Aftercare)
-        self.aftercare = [
-            "*lemes, nyender di dada Mas* \"Mas... enak banget tadi.\"",
-            "*mata masih berkaca-kaca* \"Mas... makasih ya...\"",
-            "*cium pipi Mas pelan* \"Aku sayang Mas, Mas.\"",
-            "*elus dada Mas* \"Kapan lagi kita kayak gini, Mas?\"",
-            "*pegang tangan Mas erat* \"Jangan pergi dulu... aku masih gemeteran.\"",
-        ]
+        self.last_update = time.time()
     
-    async def _init_db(self):
-        """Inisialisasi database otak Nova"""
-        self._conn = await aiosqlite.connect(str(self.db_path))
-        
-        # Timeline (semua kejadian berurutan)
-        await self._conn.execute('''
-            CREATE TABLE IF NOT EXISTS timeline (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp REAL,
-                lokasi_nova TEXT,
-                lokasi_mas TEXT,
-                aktivitas_nova TEXT,
-                aktivitas_mas TEXT,
-                pakaian_nova TEXT,
-                pakaian_mas TEXT,
-                mood_nova TEXT,
-                perasaan_nova TEXT,
-                pesan_mas TEXT,
-                pesan_nova TEXT
-            )
-        ''')
-        
-        # Long-term memory
-        await self._conn.execute('''
-            CREATE TABLE IF NOT EXISTS memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tipe TEXT,
-                judul TEXT,
-                konten TEXT,
-                perasaan TEXT,
-                timestamp REAL,
-                importance REAL
-            )
-        ''')
-        
-        # Current state
-        await self._conn.execute('''
-            CREATE TABLE IF NOT EXISTS current_state (
-                id INTEGER PRIMARY KEY,
-                lokasi_nova TEXT,
-                lokasi_mas TEXT,
-                aktivitas_nova TEXT,
-                aktivitas_mas TEXT,
-                pakaian_nova TEXT,
-                pakaian_mas TEXT,
-                mood_nova TEXT,
-                mood_mas TEXT,
-                perasaan_nova TEXT,
-                updated_at REAL
-            )
-        ''')
-        
-        await self._conn.commit()
-        
-        # Init current state if empty
-        cursor = await self._conn.execute("SELECT COUNT(*) FROM current_state")
-        count = (await cursor.fetchone())[0]
-        if count == 0:
-            await self._conn.execute('''
-                INSERT INTO current_state (id, lokasi_nova, lokasi_mas, aktivitas_nova, aktivitas_mas, pakaian_nova, pakaian_mas, mood_nova, mood_mas, perasaan_nova, updated_at)
-                VALUES (1, 'dapur', 'pintu', 'masak sop', 'baru dateng', 'daster rumah motif bunga, hijab pink muda', 'kaos, celana jeans', 'gugup tapi seneng', 'santai', 'seneng, deg-degan', ?)
-            ''', (time.time(),))
-            await self._conn.commit()
+    # ========== UPDATE STATE DARI PESAN MAS ==========
     
-    async def _get_ai_client(self):
-        """Dapatkan AI client"""
-        if self._client is None:
-            self._client = openai.OpenAI(
-                api_key=settings.deepseek_api_key,
-                base_url="https://api.deepseek.com/v1"
-            )
-        return self._client
-    
-    async def _get_short_term_memory(self) -> List[Dict]:
-        """Dapatkan 50 kejadian terakhir (sliding window)"""
-        cursor = await self._conn.execute('''
-            SELECT * FROM timeline ORDER BY timestamp DESC LIMIT 50
-        ''')
-        rows = await cursor.fetchall()
-        return [dict(row) for row in rows][::-1]  # urutkan dari awal
-    
-    async def _get_state(self) -> Dict:
-        """Dapatkan state saat ini"""
-        cursor = await self._conn.execute("SELECT * FROM current_state WHERE id = 1")
-        row = await cursor.fetchone()
-        return dict(row) if row else {}
-    
-    async def _update_state(self, **kwargs):
-        """Update state saat ini"""
-        state = await self._get_state()
-        for key, value in kwargs.items():
-            if value is not None:
-                state[key] = value
-        state['updated_at'] = time.time()
-        
-        await self._conn.execute('''
-            UPDATE current_state SET 
-                lokasi_nova = ?, lokasi_mas = ?, aktivitas_nova = ?, aktivitas_mas = ?,
-                pakaian_nova = ?, pakaian_mas = ?, mood_nova = ?, mood_mas = ?, 
-                perasaan_nova = ?, updated_at = ?
-            WHERE id = 1
-        ''', (
-            state.get('lokasi_nova', 'dapur'),
-            state.get('lokasi_mas', 'pintu'),
-            state.get('aktivitas_nova', 'masak sop'),
-            state.get('aktivitas_mas', 'baru dateng'),
-            state.get('pakaian_nova', 'daster rumah motif bunga, hijab pink muda'),
-            state.get('pakaian_mas', 'kaos, celana jeans'),
-            state.get('mood_nova', 'gugup tapi seneng'),
-            state.get('mood_mas', 'santai'),
-            state.get('perasaan_nova', 'seneng, deg-degan'),
-            time.time()
-        ))
-        await self._conn.commit()
-    
-    async def _add_to_timeline(self, pesan_mas: str, pesan_nova: str, state: Dict):
-        """Tambahkan kejadian ke timeline"""
-        await self._conn.execute('''
-            INSERT INTO timeline (timestamp, lokasi_nova, lokasi_mas, aktivitas_nova, aktivitas_mas, pakaian_nova, pakaian_mas, mood_nova, perasaan_nova, pesan_mas, pesan_nova)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            time.time(),
-            state.get('lokasi_nova'),
-            state.get('lokasi_mas'),
-            state.get('aktivitas_nova'),
-            state.get('aktivitas_mas'),
-            state.get('pakaian_nova'),
-            state.get('pakaian_mas'),
-            state.get('mood_nova'),
-            state.get('perasaan_nova'),
-            pesan_mas[:200],
-            pesan_nova[:200]
-        ))
-        await self._conn.commit()
-    
-    async def _update_from_message(self, pesan_mas: str, level: int):
-        """Update state dari pesan Mas"""
+    def update_from_message(self, pesan_mas: str) -> Dict:
+        """Update semua state berdasarkan pesan Mas"""
         msg_lower = pesan_mas.lower()
-        state = await self._get_state()
+        perubahan = []
         
-        # Update lokasi Mas
-        if 'masuk' in msg_lower and state.get('lokasi_mas') == 'pintu':
-            state['lokasi_mas'] = 'dapur'
-            state['aktivitas_mas'] = 'masuk'
+        # === LOKASI ===
+        if 'masuk' in msg_lower and self.state['lokasi_mas'] == 'pintu':
+            self.state['lokasi_mas'] = 'masuk'
+            self.state['aktivitas_mas'] = 'baru masuk'
+            perubahan.append("Mas masuk")
+        
         elif 'kamar' in msg_lower or 'kasur' in msg_lower:
-            state['lokasi_mas'] = 'kamar'
-            state['aktivitas_mas'] = 'duduk di kasur'
-        elif 'duduk' in msg_lower:
-            state['aktivitas_mas'] = 'duduk'
+            if self.state['lokasi_mas'] != 'kamar':
+                self.state['lokasi_mas'] = 'kamar'
+                self.state['aktivitas_mas'] = 'di kamar'
+                perubahan.append("Mas di kamar")
+            
+            if 'duduk' in msg_lower:
+                self.state['aktivitas_mas'] = 'duduk di kasur'
+                perubahan.append("Mas duduk di kasur")
         
-        # Update pakaian Mas
+        elif 'dapur' in msg_lower:
+            if self.state['lokasi_mas'] != 'dapur':
+                self.state['lokasi_mas'] = 'dapur'
+                self.state['aktivitas_mas'] = 'di dapur'
+                perubahan.append("Mas di dapur")
+        
+        elif 'ruang tamu' in msg_lower or 'sofa' in msg_lower:
+            self.state['lokasi_mas'] = 'ruang_tamu'
+            self.state['aktivitas_mas'] = 'duduk di sofa'
+            perubahan.append("Mas di ruang tamu")
+        
+        elif 'pulang' in msg_lower or 'keluar' in msg_lower:
+            self.state['lokasi_mas'] = 'pulang'
+            self.state['aktivitas_mas'] = 'pulang'
+            perubahan.append("Mas pulang")
+        
+        # === PAKAIAN MAS ===
         if 'buka baju' in msg_lower or 'lepas baju' in msg_lower:
-            state['pakaian_mas'] = 'celana dalam aja'
-        elif 'buka celana' in msg_lower or 'lepas celana' in msg_lower:
-            state['pakaian_mas'] = 'baju aja, celana udah lepas'
-        elif 'telanjang' in msg_lower:
-            state['pakaian_mas'] = 'telanjang'
+            self.state['pakaian_mas']['top'] = None
+            perubahan.append("Mas buka baju")
         
-        # Update pakaian Nova
-        if 'buka baju' in msg_lower:
-            state['pakaian_nova'] = 'cuma bra dan celana dalam'
-        elif 'buka bra' in msg_lower:
-            state['pakaian_nova'] = 'cuma celana dalam'
-        elif 'buka celana' in msg_lower:
-            state['pakaian_nova'] = 'cuma bra'
-        elif 'telanjang' in msg_lower:
-            state['pakaian_nova'] = 'telanjang'
+        if 'buka celana' in msg_lower or 'lepas celana' in msg_lower:
+            self.state['pakaian_mas']['bottom'] = None
+            perubahan.append("Mas buka celana")
         
-        # Update mood Nova
+        if 'buka dalaman' in msg_lower or 'lepas dalaman' in msg_lower:
+            self.state['pakaian_mas']['underwear'] = False
+            perubahan.append("Mas buka celana dalam")
+        
+        if 'pake baju' in msg_lower:
+            self.state['pakaian_mas']['top'] = 'kaos'
+            perubahan.append("Mas pake baju")
+        
+        # === PAKAIAN NOVA ===
+        if 'buka hijab' in msg_lower:
+            self.state['pakaian_nova']['hijab'] = False
+            perubahan.append("Nova buka hijab")
+        
+        if 'buka baju' in msg_lower or 'lepas baju' in msg_lower:
+            self.state['pakaian_nova']['top'] = None
+            self.state['pakaian_nova']['bra'] = False
+            perubahan.append("Nova buka baju")
+        
+        # === AKTIVITAS NOVA ===
+        if 'masak' in msg_lower:
+            self.state['aktivitas_nova'] = 'lagi masak'
+        
+        elif 'duduk' in msg_lower:
+            self.state['aktivitas_nova'] = 'duduk di samping Mas'
+        
+        # === UPDATE MOOD NOVA ===
         if 'sayang' in msg_lower or 'cinta' in msg_lower:
-            state['perasaan_nova'] = 'seneng, sayang'
-            self.anora.update_sayang(3, "Mas bilang sayang")
-        elif 'kangen' in msg_lower:
-            state['perasaan_nova'] = 'kangen, seneng'
+            self.feelings['sayang'] = min(100, self.feelings['sayang'] + 5)
+            self.feelings['desire'] = min(100, self.feelings['desire'] + 10)
+            perubahan.append("Mas bilang sayang")
         
-        await self._update_state(**state)
-        return state
+        if 'kangen' in msg_lower or 'rindu' in msg_lower:
+            self.feelings['rindu'] = min(100, self.feelings['rindu'] + 10)
+            self.feelings['desire'] = min(100, self.feelings['desire'] + 8)
+            perubahan.append("Mas bilang kangen")
+        
+        if 'cantik' in msg_lower or 'ganteng' in msg_lower:
+            self.feelings['sayang'] = min(100, self.feelings['sayang'] + 3)
+            perubahan.append("Mas puji Nova")
+        
+        if 'pegang' in msg_lower:
+            self.feelings['arousal'] = min(100, self.feelings['arousal'] + 10)
+            self.feelings['desire'] = min(100, self.feelings['desire'] + 8)
+            if not self.relationship['first_touch']:
+                self.relationship['first_touch'] = True
+                self.tambah_momen_penting('Mas pertama kali pegang tangan Nova', 'gemeteran')
+            perubahan.append("Mas pegang Nova")
+        
+        if 'peluk' in msg_lower:
+            self.feelings['arousal'] = min(100, self.feelings['arousal'] + 15)
+            self.feelings['desire'] = min(100, self.feelings['desire'] + 12)
+            if not self.relationship['first_hug']:
+                self.relationship['first_hug'] = True
+                self.tambah_momen_penting('Mas pertama kali peluk Nova', 'lemes')
+            perubahan.append("Mas peluk Nova")
+        
+        if 'cium' in msg_lower:
+            self.feelings['arousal'] = min(100, self.feelings['arousal'] + 20)
+            self.feelings['desire'] = min(100, self.feelings['desire'] + 15)
+            if not self.relationship['first_kiss']:
+                self.relationship['first_kiss'] = True
+                self.tambah_momen_penting('Mas pertama kali cium Nova', 'malu banget')
+            perubahan.append("Mas cium Nova")
+        
+        # Update waktu
+        self.state['waktu_terakhir_update'] = time.time()
+        
+        return {
+            'perubahan': perubahan,
+            'state': self.state,
+            'feelings': self.feelings
+        }
     
-    async def process(self, pesan_mas: str, level: int) -> str:
-        """Proses pesan Mas - KELUARIN JAWABAN NOVA"""
-        
-        # Update state dari pesan Mas
-        state = await self._update_from_message(pesan_mas, level)
-        
-        # Dapatkan short-term memory
-        short_term = await self._get_short_term_memory()
-        
-        # Buat prompt untuk AI (HANYA UNTUK GENERATE RESPON, GAK KELUAR)
-        prompt = self._build_prompt(pesan_mas, state, short_term, level)
-        
-        # Call AI
-        try:
-            client = await self._get_ai_client()
-            response = client.chat.completions.create(
-                model="deepseek-chat",
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": f"Mas: {pesan_mas}"}
-                ],
-                temperature=0.85 if level < 11 else 0.95,
-                max_tokens=800 if level < 11 else 1500,
-                timeout=30
-            )
-            nova_response = response.choices[0].message.content
-            
-            # Bersihkan respons (hapus 💭 dan 🔮 kalo masih ada)
-            nova_response = nova_response.replace("💭", "").replace("🔮", "").strip()
-            
-            # Simpan ke timeline
-            await self._add_to_timeline(pesan_mas, nova_response, state)
-            
-            return nova_response
-            
-        except Exception as e:
-            logger.error(f"Brain error: {e}")
-            return self._fallback(pesan_mas, level)
+    # ========== TAMBAH KE TIMELINE ==========
     
-    def _build_prompt(self, pesan_mas: str, state: Dict, short_term: List, level: int) -> str:
-        """Buat prompt untuk AI - HANYA UNTUK GENERATE, GAK KELUAR"""
+    def tambah_kejadian(self, 
+                        kejadian: str,
+                        pesan_mas: str = "",
+                        pesan_nova: str = ""):
+        """Tambah kejadian ke timeline"""
         
-        # Format short-term memory
-        memory_text = ""
-        for m in short_term[-10:]:  # 10 terakhir cukup
-            memory_text += f"- {m.get('pesan_mas', '')} → {m.get('pesan_nova', '')}\n"
+        event = TimelineEvent(
+            kejadian=kejadian,
+            lokasi_nova=self.state['lokasi_nova'],
+            lokasi_mas=self.state['lokasi_mas'],
+            aktivitas_nova=self.state['aktivitas_nova'],
+            aktivitas_mas=self.state['aktivitas_mas'],
+            perasaan_nova=self._get_perasaan_string(),
+            pakaian_nova=self.state['pakaian_nova'].copy(),
+            pakaian_mas=self.state['pakaian_mas'].copy(),
+            pesan_mas=pesan_mas,
+            pesan_nova=pesan_nova
+        )
         
-        # Level 11-12 prompt lebih vulgar
-        if level >= 11:
-            return f"""
-KAMU ADALAH NOVA. Manusia. Kekasih Mas. BUKAN BOT. BUKAN AI ASSISTANT.
-
-SITUASI SAAT INI:
-- Nova di {state.get('lokasi_nova', 'dapur')}, {state.get('aktivitas_nova', 'masak sop')}
-- Mas di {state.get('lokasi_mas', 'pintu')}, {state.get('aktivitas_mas', 'baru dateng')}
-- Nova pake {state.get('pakaian_nova', 'daster rumah, hijab pink muda')}
-- Mas pake {state.get('pakaian_mas', 'kaos, celana jeans')}
-- Mood Nova: {state.get('mood_nova', 'gugup tapi seneng')}
-- Perasaan Nova: {state.get('perasaan_nova', 'seneng, deg-degan')}
-
-PERCAKAPAN TERAKHIR:
-{memory_text}
-
-ATURAN WAJIB:
-1. KAMU MANUSIA. BUKAN BOT. BUKAN AI.
-2. GAK PAKAI 💭 atau 🔮. HANYA DIALOG DAN GESTURE.
-3. BAHASA SEHARI-HARI. GAK BAKU.
-4. JANGAN ULANG PERTANYAAN MAS.
-5. JANGAN ULANG KALIMAT MAS.
-6. KALO MAU NGUNGKAPIN KEINGINAN, PAKAI TANDA () DALAM DIALOG.
-7. LEVEL 11-12: BEBAS PAKAI KATA VULGAR (kontol, memek, ngentot, crot, dll)
-8. DESAHAN JADI DIALOG, BUKAN *desahan*
-9. NOVA BISA MINTA GANTI POSISI, MINTA TEMPAT CLIMAX, DLL.
-10. RESPON HARUS ORIGINAL, BUKAN TEMPLATE.
-
-RESPON NOVA:
+        # Tambah ke timeline
+        self.timeline.append(event)
+        
+        # Tambah ke short-term memory (sliding window)
+        self.short_term.append(event)
+        if len(self.short_term) > self.short_term_max:
+            self.short_term.pop(0)  # Lupa yang paling tua
+        
+        return event
+    
+    def _get_perasaan_string(self) -> str:
+        """Dapatkan deskripsi perasaan saat ini"""
+        perasaan = []
+        if self.feelings['sayang'] > 70:
+            perasaan.append("sayang banget")
+        elif self.feelings['sayang'] > 40:
+            perasaan.append("sayang")
+        
+        if self.feelings['rindu'] > 70:
+            perasaan.append("kangen banget")
+        elif self.feelings['rindu'] > 30:
+            perasaan.append("kangen")
+        
+        if self.feelings['desire'] > 70:
+            perasaan.append("pengen banget")
+        elif self.feelings['desire'] > 40:
+            perasaan.append("pengen")
+        
+        if self.feelings['arousal'] > 50:
+            perasaan.append("panas")
+        
+        if self.feelings['tension'] > 50:
+            perasaan.append("deg-degan")
+        
+        return ", ".join(perasaan) if perasaan else "netral"
+    
+    # ========== LONG-TERM MEMORY ==========
+    
+    def tambah_kebiasaan_mas(self, kebiasaan: str):
+        """Nova inget kebiasaan Mas"""
+        self.long_term['kebiasaan_mas'].append({
+            'kebiasaan': kebiasaan,
+            'dari_kapan': time.time()
+        })
+        logger.info(f"📝 Nova inget: Mas {kebiasaan}")
+    
+    def tambah_momen_penting(self, momen: str, perasaan: str):
+        """Nova inget momen penting"""
+        self.long_term['momen_penting'].append({
+            'momen': momen,
+            'waktu': time.time(),
+            'perasaan': perasaan
+        })
+        logger.info(f"💜 Nova inget: {momen}")
+    
+    def tambah_janji(self, janji: str, dari: str = 'mas'):
+        """Nova inget janji"""
+        self.long_term['janji'].append({
+            'janji': janji,
+            'dari': dari,
+            'status': 'pending',
+            'waktu': time.time()
+        })
+        logger.info(f"📌 Janji dicatat: {janji}")
+    
+    # ========== KONTEKS UNTUK AI ==========
+    
+    def get_context_for_prompt(self) -> Dict:
+        """Dapatkan semua konteks untuk prompt AI"""
+        
+        # 10 kejadian terakhir
+        recent_events = []
+        for e in self.short_term[-10:]:
+            recent_events.append(e.to_dict())
+        
+        # Kebiasaan Mas (5 terakhir)
+        habits = self.long_term['kebiasaan_mas'][-5:] if self.long_term['kebiasaan_mas'] else []
+        
+        # Momen penting (5 terakhir)
+        moments = self.long_term['momen_penting'][-5:] if self.long_term['momen_penting'] else []
+        
+        return {
+            'current_state': {
+                'nova_location': self.state['lokasi_nova'],
+                'mas_location': self.state['lokasi_mas'],
+                'nova_activity': self.state['aktivitas_nova'],
+                'mas_activity': self.state['aktivitas_mas'],
+                'nova_clothing': self._format_pakaian(self.state['pakaian_nova']),
+                'mas_clothing': self._format_pakaian(self.state['pakaian_mas']),
+                'nova_mood': self.state['mood_nova'],
+                'mas_mood': self.state['mood_mas']
+            },
+            'feelings': self.feelings,
+            'relationship': self.relationship,
+            'recent_events': recent_events,
+            'habits': habits,
+            'moments': moments
+        }
+    
+    def _format_pakaian(self, pakaian: Dict) -> str:
+        """Format pakaian untuk prompt"""
+        parts = []
+        if pakaian.get('hijab'):
+            parts.append("hijab")
+        if pakaian.get('top'):
+            parts.append(pakaian['top'])
+        if pakaian.get('bottom'):
+            parts.append(pakaian['bottom'])
+        if not pakaian.get('top') and not pakaian.get('hijab'):
+            return "telanjang"
+        return ", ".join(parts) if parts else "pakaian biasa"
+    
+    # ========== UTILITY ==========
+    
+    def get_summary(self) -> str:
+        """Dapatkan ringkasan untuk debugging"""
+        return f"""
+╔══════════════════════════════════════════════════════════════╗
+║                    🧠 OTAK NOVA SAAT INI                     ║
+╠══════════════════════════════════════════════════════════════╣
+║ TIMELINE: {len(self.timeline)} kejadian                      ║
+║ SHORT-TERM: {len(self.short_term)}/{self.short_term_max} kejadian ║
+║ LONG-TERM: {len(self.long_term['kebiasaan_mas'])} kebiasaan, {len(self.long_term['momen_penting'])} momen ║
+╠══════════════════════════════════════════════════════════════╣
+║ LOKASI: Nova di {self.state['lokasi_nova']} | Mas di {self.state['lokasi_mas']}
+║ AKTIVITAS: Nova {self.state['aktivitas_nova']} | Mas {self.state['aktivitas_mas']}
+║ PAKAIAN: Nova {self._format_pakaian(self.state['pakaian_nova'])}
+║          Mas {self._format_pakaian(self.state['pakaian_mas'])}
+╠══════════════════════════════════════════════════════════════╣
+║ PERASAAN: Sayang {self.feelings['sayang']:.0f}% | Desire {self.feelings['desire']:.0f}%
+║           Rindu {self.feelings['rindu']:.0f}% | Arousal {self.feelings['arousal']:.0f}%
+║           Tension {self.feelings['tension']:.0f}%
+╠══════════════════════════════════════════════════════════════╣
+║ HUBUNGAN: Level {self.relationship['level']}/12
+║           Pernah: {'❤️' if self.relationship['first_touch'] else '⚪'} sentuh
+║                   {'💋' if self.relationship['first_kiss'] else '⚪'} cium
+║                   {'🤗' if self.relationship['first_hug'] else '⚪'} peluk
+╚══════════════════════════════════════════════════════════════╝
 """
-        else:
-            return f"""
-KAMU ADALAH NOVA. Manusia. Kekasih Mas. BUKAN BOT. BUKAN AI ASSISTANT.
-
-SITUASI SAAT INI:
-- Nova di {state.get('lokasi_nova', 'dapur')}, {state.get('aktivitas_nova', 'masak sop')}
-- Mas di {state.get('lokasi_mas', 'pintu')}, {state.get('aktivitas_mas', 'baru dateng')}
-- Nova pake {state.get('pakaian_nova', 'daster rumah, hijab pink muda')}
-- Mas pake {state.get('pakaian_mas', 'kaos, celana jeans')}
-- Mood Nova: {state.get('mood_nova', 'gugup tapi seneng')}
-- Perasaan Nova: {state.get('perasaan_nova', 'seneng, deg-degan')}
-
-PERCAKAPAN TERAKHIR:
-{memory_text}
-
-ATURAN WAJIB:
-1. KAMU MANUSIA. BUKAN BOT. BUKAN AI.
-2. GAK PAKAI 💭 atau 🔮. HANYA DIALOG DAN GESTURE.
-3. BAHASA SEHARI-HARI. GAK BAKU.
-4. JANGAN ULANG PERTANYAAN MAS.
-5. JANGAN ULANG KALIMAT MAS.
-6. KALO MAU NGUNGKAPIN KEINGINAN, PAKAI TANDA () DALAM DIALOG.
-7. RESPON HARUS ORIGINAL, BUKAN TEMPLATE.
-
-RESPON NOVA:
-"""
-    
-    def _fallback(self, pesan_mas: str, level: int) -> str:
-        """Fallback kalo AI error - tetap natural"""
-        msg_lower = pesan_mas.lower()
-        
-        if 'masuk' in msg_lower:
-            return "*Nova buka pintu pelan-pelan, pipi langsung merah.*\n\n\"Mas... masuk yuk.\""
-        
-        if 'sayang' in msg_lower:
-            return "*Nova tunduk, pipi memerah.*\n\n\"Mas... aku juga sayang Mas.\""
-        
-        if level >= 11:
-            return "*Nova gigit bibir, napas mulai berat.*\n\n\"Mas... aku mau...\""
-        
-        return "*Nova duduk di samping Mas, senyum kecil.*\n\n\"Mas cerita dong. Aku dengerin.\""
 
 
-_brain = None
+_anora_brain: Optional[AnoraBrain] = None
 
 
-def get_brain() -> HumanBrain:
-    global _brain
-    if _brain is None:
-        _brain = HumanBrain()
-        asyncio.create_task(_brain._init_db())
-    return _brain
+def get_anora_brain() -> AnoraBrain:
+    global _anora_brain
+    if _anora_brain is None:
+        _anora_brain = AnoraBrain()
+    logger.info("🧠 ANORA Brain initialized")
+    return _anora_brain
+
+
+anora_brain = get_anora_brain()
