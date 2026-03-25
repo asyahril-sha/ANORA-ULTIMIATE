@@ -97,33 +97,36 @@ class ArousalSystem:
         return self.arousal
     
     def add_from_conversation(self, pesan_mas: str, level: int) -> int:
-        """
-        Tambah arousal dari obrolan biasa (tanpa sentuhan fisik)
-        Returns: total gain
-        """
+        """Tambah arousal dari obrolan biasa"""
         msg_lower = pesan_mas.lower()
         total_gain = 0
-        
-        for word, gain in self.conversation_arousal_map.items():
+    
+        arousal_map = {
+            'kangen': 8, 'rindu': 8, 'sayang': 10, 'cinta': 10,
+            'cantik': 12, 'manis': 10, 'gemes': 8, 'imut': 8,
+            'seksi': 18, 'pengen': 15, 'mau': 12,
+            'horny': 20, 'sange': 20,
+        }
+    
+        for word, gain in arousal_map.items():
             if word in msg_lower:
                 total_gain += gain
-                logger.debug(f"💬 Arousal +{gain} from '{word}'")
-        
+    
         if total_gain > 0:
-            # Level rendah: arousal naik lebih lambat
+            # Level 1-3: arousal naik 70% (biar terasa)
             if level <= 3:
-                total_gain = int(total_gain * 0.3)
-                logger.debug(f"📉 Level {level}: arousal gain reduced to {total_gain}")
+                total_gain = int(total_gain * 0.7)  # ← Ubah dari 0.3 jadi 0.7
+            # Level 4-6: naik 90%
             elif level <= 6:
-                total_gain = int(total_gain * 0.6)
-                logger.debug(f"📉 Level {level}: arousal gain reduced to {total_gain}")
-            
-            # Tambah ke arousal (dengan area 'mental')
+                total_gain = int(total_gain * 0.9)  # ← Ubah dari 0.6 jadi 0.9
+            # Level 7+: naik 100%
+        
             self.add_stimulation('mental', total_gain // 10)
             self.add_desire(f'Mas flirt: {pesan_mas[:30]}', total_gain)
-            
-            logger.info(f"💕 Arousal +{total_gain} from conversation (now {self.arousal}%)")
         
+            # Log biar keliatan
+            logger.info(f"💕 Arousal +{total_gain} from conversation (now {self.arousal}%)")
+    
         return total_gain
     
     def add_desire(self, reason: str, amount: int = 5):
