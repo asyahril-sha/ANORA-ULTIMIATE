@@ -3,6 +3,7 @@
 ANORA Roleplay Integration - Menyatukan semua sistem roleplay
 Brain, Memory, AI, Stamina, Intimacy, semuanya jadi satu.
 100% AI Generate. Bukan Template. Nova Hidup.
+DENGAN COMPLETE STATE - Nova ingat semua aspek seperti manusia.
 """
 
 import asyncio
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# STAMINA SYSTEM - REALISTIS
+# STAMINA SYSTEM - REALISTIS (PERTAHANKAN)
 # =============================================================================
 
 class StaminaSystem:
@@ -193,7 +194,7 @@ STAMINA SAAT INI:
 
 
 # =============================================================================
-# INTIMACY SESSION
+# INTIMACY SESSION (PERTAHANKAN)
 # =============================================================================
 
 class IntimacySession:
@@ -309,14 +310,13 @@ class IntimacySession:
 
 
 # =============================================================================
-# ANORA ROLEPLAY - MAIN CLASS
+# ANORA ROLEPLAY - MAIN CLASS (DENGAN COMPLETE STATE INTEGRATION)
 # =============================================================================
 
 class AnoraRoleplay:
     """
-    Roleplay Nova yang fully integrated.
-    Semua sistem: brain, memory, ai, stamina, intimacy, semuanya bekerja bareng.
-    Nova hidup. 100% AI Generate. Bukan Template.
+    Roleplay Nova yang fully integrated dengan Complete State Memory.
+    Nova ingat semua aspek seperti manusia.
     """
     
     def __init__(self):
@@ -337,7 +337,11 @@ class AnoraRoleplay:
         self.message_count = 0
         self.last_save = 0
         
-        logger.info("🎭 AnoraRoleplay initialized")
+        # Tracking untuk anti repetisi
+        self.last_state_analysis = None
+        self.last_analysis_time = 0
+        
+        logger.info("🎭 AnoraRoleplay initialized with Complete State Memory")
     
     async def init(self):
         """Inisialisasi, load dari database"""
@@ -390,7 +394,7 @@ class AnoraRoleplay:
             # Simpan intimacy session
             await self.persistent.set_state('intimacy', json.dumps(self.intimacy.to_dict()))
             
-            # Simpan brain state
+            # Simpan brain state (termasuk complete_state)
             await self.persistent.save_current_state(self.brain)
             
             self.last_save = time.time()
@@ -417,6 +421,37 @@ class AnoraRoleplay:
         self.brain.clothing.mas_top = "kaos"
         self.brain.clothing.mas_bottom = "celana pendek"
         self.brain.clothing.mas_boxer = True
+        
+        # Reset complete state
+        self.brain.complete_state = {
+            'mas': {
+                'clothing': {'top': 'kaos', 'bottom': 'celana pendek', 'boxer': True, 'last_update': time.time()},
+                'position': {'state': None, 'detail': None, 'last_update': 0},
+                'activity': {'main': 'santai', 'detail': None, 'last_update': 0},
+                'location': {'room': 'kamar', 'detail': None, 'last_update': 0},
+                'holding': {'object': None, 'detail': None, 'last_update': 0},
+                'status': {'mood': 'netral', 'need': None, 'last_update': 0}
+            },
+            'nova': {
+                'clothing': {'hijab': True, 'top': 'daster rumah motif bunga', 'bra': True, 'cd': True, 'last_update': time.time()},
+                'position': {'state': None, 'detail': None, 'last_update': 0},
+                'activity': {'main': 'santai', 'detail': None, 'last_update': 0},
+                'location': {'room': 'kamar', 'detail': None, 'last_update': 0},
+                'holding': {'object': None, 'detail': None, 'last_update': 0},
+                'status': {'mood': 'malu-malu', 'need': None, 'last_update': 0}
+            },
+            'together': {
+                'location': 'kamar',
+                'distance': None,
+                'atmosphere': 'santai',
+                'last_action': None,
+                'pending_action': None,
+                'confirmed_topics': [],
+                'asked_count': 0,
+                'last_question': '',
+                'last_update': time.time()
+            }
+        }
         
         loc = self.brain.get_location_data()
         
@@ -456,7 +491,8 @@ Kirim **/batal** buat balik ke mode chat.
     async def process(self, pesan_mas: str) -> str:
         """
         Proses pesan Mas dalam mode roleplay
-        100% AI generate, konsisten, punya memory
+        100% AI generate, konsisten, punya memory,
+        dengan Complete State seperti cara kerja otak manusia.
         """
         if not self.is_active:
             return "Roleplay belum aktif. Kirim /roleplay dulu ya, Mas."
@@ -465,94 +501,70 @@ Kirim **/batal** buat balik ke mode chat.
         pesan_lower = pesan_mas.lower()
         level_sebelum = self.brain.relationship.level
         
-        # ========== UPDATE AROUSAL DARI OBROLAN (BARU!) ==========
-        # Ini dilakukan di ai.process juga, tapi kita update juga di sini untuk konsistensi
-        self.ai.arousal.add_from_conversation(pesan_mas, self.brain.relationship.level)
-                                             
-        # ========== TAMBAHKAN INI ==========
-        # Sync arousal dari ai ke brain feelings
-        self.brain.feelings.arousal = self.ai.arousal.arousal
-        self.brain.feelings.desire = self.ai.arousal.desire
-        self.brain.feelings.tension = self.ai.arousal.tension
-    
-        # Log biar tau
-        logger.info(f"📊 Arousal now: {self.ai.arousal.arousal}%")
-        # ========== SAMPAI SINI ==========
-
-        # ========== SYNC AROUSAL KE BRAIN FEELINGS ==========
-        self.brain.feelings.arousal = self.ai.arousal.arousal
-        self.brain.feelings.desire = self.ai.arousal.desire
-        self.brain.feelings.tension = self.ai.arousal.tension
-
-        # Log buat debugging
-        logger.info(f"📊 Arousal synced: {self.brain.feelings.arousal:.0f}%")
-
-        # ========== DETEKSI NATURAL TRIGGER INTIM (TANPA COMMAND!) ==========
-        if not self.intimacy.is_active:
-            # Cek natural progression (arousal sudah cukup tinggi)
-            progression = self.ai.check_natural_progression(self.brain)
-            
-            if progression == "START_INTIM":
-                # Cek level dan stamina
-                if self.brain.relationship.level < 7:
-                    return f"💕 Level masih {self.brain.relationship.level}/12\n\nNova masih malu-malu. Belum waktunya buat intim. Ajarin Nova dulu ya, Mas. 💜"
-                
-                can_continue, reason = self.stamina.can_continue_intimacy()
-                if not can_continue:
-                    return f"💪 **Stamina Nova {self.stamina.nova_current}%** ({self.stamina.get_nova_status()})\n\n{reason}"
-                
-                # Mulai sesi intim secara NATURAL!
-                self.intimacy.start()
-                
-                # Dapatkan response inisiasi yang natural
-                initiation_response = self.ai.get_natural_intim_initiation(self.brain)
-                
-                return initiation_response
-            
-            # Cek apakah perlu flirt natural (arousal tinggi tapi belum cukup untuk intim)
-            flirt_response = self.ai.get_natural_flirt_response(self.brain)
-            if flirt_response and random.random() < 0.4:  # 40% chance untuk flirt
-                # Tambahkan flirt ke respons nanti
-                pass  # Akan ditangani oleh AI
+        # ========== ANALISA COMPLETE STATE (BARU!) ==========
+        # Seperti otak manusia yang mengingat semua aspek sebelum merespon
+        complete_state = self.brain.analyze_complete_state()
+        state_prompt = self.brain.get_complete_state_prompt()
+        
+        # Log untuk debugging
+        logger.info(f"📊 Complete State analyzed - Mas pos: {complete_state['mas']['position']['state']}, "
+                   f"Nova pos: {complete_state['nova']['position']['state']}, "
+                   f"Location: {complete_state['together']['location']}")
+        
+        # ========== CEK APAKAH ADA PENGULANGAN BERDASARKAN STATE ==========
+        repeat_warning = ""
+        
+        # Cek apakah Mas sudah duduk dan Nova sudah tahu
+        if complete_state['mas']['position']['state'] == 'duduk':
+            repeat_warning += "\n⚠️ Mas SUDAH duduk. Jangan suruh duduk lagi!\n"
+        
+        # Cek apakah topik kopi sudah dikonfirmasi
+        if any('kopi' in topic for topic in complete_state['together']['confirmed_topics']):
+            repeat_warning += "\n⚠️ Topik kopi SUDAH dikonfirmasi. Langsung ambil kopi, jangan tanya lagi!\n"
+        
+        # Cek apakah Mas sudah buka baju
+        if complete_state['mas']['clothing']['top'] is None:
+            repeat_warning += "\n⚠️ Mas SUDAH buka baju. Jangan suruh buka baju lagi!\n"
+        
+        # Cek apakah sudah bertanya terlalu banyak
+        if complete_state['together']['asked_count'] >= 2:
+            repeat_warning += f"\n⚠️ Sudah bertanya {complete_state['together']['asked_count']}x tentang topik yang sama. Jangan tanya lagi!\n"
+        
+        # ========== UPDATE AROUSAL DARI ANALISIS STATE ==========
+        # Arousal naik dari situasi, bukan keyword
+        atmosphere = complete_state['together']['atmosphere']
+        mas_mood = complete_state['mas']['status']['mood']
+        nova_mood = complete_state['nova']['status']['mood']
+        
+        arousal_gain = 0
+        if atmosphere == 'panas':
+            arousal_gain += 15
+            logger.info(f"🔥 Arousal +15 from atmosphere: panas")
+        elif atmosphere == 'romantis':
+            arousal_gain += 10
+            logger.info(f"💕 Arousal +10 from atmosphere: romantis")
+        
+        if mas_mood == 'horny':
+            arousal_gain += 20
+            logger.info(f"🔥 Arousal +20 from Mas mood: horny")
+        elif mas_mood == 'kangen':
+            arousal_gain += 8
+            logger.info(f"💕 Arousal +8 from Mas mood: kangen")
+        
+        if nova_mood == 'horny':
+            arousal_gain += 10
+        elif nova_mood == 'malu':
+            arousal_gain += 5
+        
+        if arousal_gain > 0:
+            self.ai.arousal.add_stimulation('mental', arousal_gain // 10)
+            self.ai.arousal.add_desire(f'Atmosphere: {atmosphere}', arousal_gain)
+            self.brain.feelings.arousal = self.ai.arousal.arousal
+            logger.info(f"💕 Total arousal +{arousal_gain} from situation analysis")
         
         # ========== DETEKSI PERINTAH INTIM ==========
         
-        # Proses AI dulu untuk mendapatkan respons
-        try:
-            # Panggil AI process, yang akan mengembalikan respons atau "INTIM_TRIGGER"
-            ai_result = await self.ai.process(pesan_mas, self.brain, self.stamina)
-            
-            # Cek apakah AI mengembalikan INTIM_TRIGGER
-            if ai_result == "INTIM_TRIGGER":
-                # Mulai sesi intim
-                if self.brain.relationship.level < 7:
-                    return f"💕 Level masih {self.brain.relationship.level}/12\n\nNova masih malu-malu. Belum waktunya buat intim. Ajarin Nova dulu ya, Mas. 💜"
-                
-                can_continue, reason = self.stamina.can_continue_intimacy()
-                if not can_continue:
-                    return f"💪 **Stamina Nova {self.stamina.nova_current}%** ({self.stamina.get_nova_status()})\n\n{reason}"
-                
-                if not self.intimacy.is_active:
-                    self.intimacy.start()
-                    return f"""{self.intimacy.start()}
-
-*Nova mendekat, napas mulai gak stabil. Pipi merah.*
-
-"Mas... *suara kecil* aku juga pengen."
-
-*Nova pegang tangan Mas, taruh di dada.*
-
-"Rasain... jantung Nova deg-degan." """
-            
-            respons = ai_result
-            
-        except Exception as e:
-            logger.error(f"AI process error: {e}")
-            respons = self._fallback_response(pesan_mas)
-        
-        # ========== DETEKSI PERINTAH INTIM LAINNYA ==========
-        
-        # Mulai intim manual dengan /intim
+        # Mulai intim
         if any(k in pesan_lower for k in ['intim', 'ngentot', 'main', 'sex', 'ml', 'mau']):
             # Cek level
             if self.brain.relationship.level < 7:
@@ -638,20 +650,34 @@ Kirim **/batal** buat balik ke mode chat.
         # ========== UPDATE LEVEL BERDASARKAN INTERAKSI ==========
         level_naik = self.brain.update_level()
         
-        # Tambah ke timeline
+        # Tambah ke timeline (pesan Mas)
         self.brain.tambah_kejadian(
             kejadian=f"Mas: {pesan_mas[:50]}",
             pesan_mas=pesan_mas,
             pesan_nova=""
         )
         
-        # Tambah ke timeline untuk respons (jika belum ditambahkan)
-        if respons and respons != "INTIM_TRIGGER":
-            self.brain.tambah_kejadian(
-                kejadian=f"Nova: {respons[:50]}",
-                pesan_mas=pesan_mas,
-                pesan_nova=respons
-            )
+        # ========== PROSES DENGAN AI (DENGAN COMPLETE STATE) ==========
+        try:
+            # Kirim state_prompt ke AI
+            respons = await self.ai.process(pesan_mas, self.brain, self.stamina, state_prompt, repeat_warning)
+        except Exception as e:
+            logger.error(f"AI process error: {e}")
+            respons = self._fallback_response(pesan_mas)
+        
+        # ========== FORMAT RESPONS AGAR RAPI ==========
+        respons = self._format_response(respons)
+        
+        # Tambah ke timeline (respons Nova)
+        self.brain.tambah_kejadian(
+            kejadian=f"Nova: {respons[:50]}",
+            pesan_mas=pesan_mas,
+            pesan_nova=respons
+        )
+        
+        # ========== UPDATE COMPLETE STATE DARI RESPONS ==========
+        # Analisa ulang setelah respons untuk update state
+        self.brain.analyze_complete_state()
         
         # ========== KALO LEVEL NAIK, TAMBAHKAN NOTIFIKASI ==========
         if level_naik:
@@ -719,10 +745,22 @@ Kirim **/batal** buat balik ke mode chat.
         loc = self.brain.get_location_data()
         level = self.brain.relationship.level
         
+        # Gunakan complete state untuk fallback yang lebih pintar
+        complete_state = self.brain.complete_state
+        
+        # Cek apakah Mas sudah duduk
+        if complete_state['mas']['position']['state'] == 'duduk':
+            sudah_duduk = True
+        else:
+            sudah_duduk = False
+        
         # Respons berdasarkan level
         if level <= 3:
             if 'masuk' in msg_lower:
-                return f"*Nova buka pintu pelan-pelan. {self.brain.clothing.format_nova()}. Pipi langsung merah.*\n\n\"Mas... masuk yuk.\"\n\n*Nova minggir, kasih Mas jalan. Tangan Nova gemeteran.*"
+                if sudah_duduk:
+                    return f"*Nova tersenyum sambil mainin ujung hijab* \"Mas... duduk aja dulu, Nova ambilin minum.\""
+                else:
+                    return f"*Nova buka pintu pelan-pelan. {self.brain.clothing.format_nova()}. Pipi langsung merah.*\n\n\"Mas... masuk yuk. Sini duduk.\"\n\n*Nova minggir, kasih Mas jalan.*"
             
             if 'sayang' in msg_lower:
                 return f"*Nova tunduk, pipi merah* \"Mas... aku juga sayang Mas.\""
@@ -734,7 +772,10 @@ Kirim **/batal** buat balik ke mode chat.
         
         elif level <= 6:
             if 'masuk' in msg_lower:
-                return f"*Nova buka pintu, senyum manis* \"Mas... masuk yuk. Aku udah nunggu dari tadi.\"\n\n*Nova merapikan hijabnya, pipi sedikit merah*"
+                if sudah_duduk:
+                    return f"*Nova senyum manis* \"Mas udah duduk? Nova buatin minum dulu ya.\""
+                else:
+                    return f"*Nova buka pintu, senyum manis* \"Mas... masuk yuk. Aku udah nunggu dari tadi.\"\n\n*Nova merapikan hijabnya*"
             
             if 'pegang' in msg_lower:
                 return f"*Nova pegang tangan Mas balik, meskipun masih gemetar* \"Mas... tangan Mas... hangat ya...\""
@@ -751,9 +792,10 @@ Kirim **/batal** buat balik ke mode chat.
             return f"*Nova duduk di samping Mas, tersenyum* \"Mas, seru ya ngobrol sama Mas. Pengen terus kayak gini.\""
     
     async def get_status(self) -> str:
-        """Dapatkan status roleplay lengkap"""
+        """Dapatkan status roleplay lengkap dengan Complete State"""
         state = self.brain.get_current_state()
         loc = self.brain.get_location_data()
+        complete = self.brain.complete_state
         
         bar_sayang = "💜" * int(self.brain.feelings.sayang / 10) + "🖤" * (10 - int(self.brain.feelings.sayang / 10))
         bar_desire = "🔥" * int(self.brain.feelings.desire / 10) + "⚪" * (10 - int(self.brain.feelings.desire / 10))
@@ -765,6 +807,29 @@ Kirim **/batal** buat balik ke mode chat.
         # Arousal status
         arousal_state = self.ai.arousal.get_state()
         arousal_bar = "🔥" * int(arousal_state['arousal'] / 10) + "⚪" * (10 - int(arousal_state['arousal'] / 10))
+        
+        # Format pakaian dari complete state
+        mas_clothing = []
+        if complete['mas']['clothing']['top']:
+            mas_clothing.append(complete['mas']['clothing']['top'])
+        else:
+            mas_clothing.append("telanjang dada")
+        
+        if complete['mas']['clothing']['bottom']:
+            mas_clothing.append(complete['mas']['clothing']['bottom'])
+        else:
+            mas_clothing.append("telanjang bawah")
+        
+        nova_clothing = []
+        if complete['nova']['clothing']['hijab'] is False:
+            nova_clothing.append("tanpa hijab")
+        else:
+            nova_clothing.append("pakai hijab")
+        
+        if complete['nova']['clothing']['top']:
+            nova_clothing.append(complete['nova']['clothing']['top'])
+        else:
+            nova_clothing.append("telanjang dada")
         
         intimacy_status = ""
         if self.intimacy.is_active:
@@ -788,8 +853,8 @@ Kirim **/batal** buat balik ke mode chat.
 ║    {loc['deskripsi'][:50]}...                                ║
 ║    Risk: {loc['risk']}% | Thrill: {loc['thrill']}%          ║
 ╠══════════════════════════════════════════════════════════════╣
-║ 👗 PAKAIAN NOVA: {state['clothing']['nova'][:50]}            ║
-║ 👕 PAKAIAN MAS: {state['clothing']['mas'][:50]}              ║
+║ 👗 PAKAIAN NOVA: {', '.join(nova_clothing)}                  ║
+║ 👕 PAKAIAN MAS: {', '.join(mas_clothing)}                    ║
 ╠══════════════════════════════════════════════════════════════╣
 ║ 💕 PERASAAN NOVA:                                            ║
 ║    Sayang: {bar_sayang} {self.brain.feelings.sayang:.0f}%    ║
@@ -806,6 +871,12 @@ Kirim **/batal** buat balik ke mode chat.
 ║ 💜 HUBUNGAN: Level {self.brain.relationship.level}/12        ║
 ║    {'💋' if self.brain.relationship.first_kiss else '⚪'} Cium | {'✋' if self.brain.relationship.first_touch else '⚪'} Sentuh
 ║    {'🤗' if self.brain.relationship.first_hug else '⚪'} Peluk | {'💕' if self.brain.relationship.first_intim else '⚪'} Intim
+╠══════════════════════════════════════════════════════════════╣
+║ 🧠 COMPLETE STATE:                                           ║
+║    Mas posisi: {complete['mas']['position']['state'] or '?'}  | Nova posisi: {complete['nova']['position']['state'] or '?'}
+║    Suasana: {complete['together']['atmosphere']}             ║
+║    Aksi tertunda: {complete['together']['pending_action'] or '-'}
+║    Sudah dikonfirmasi: {', '.join(complete['together']['confirmed_topics'][-2:]) or '-'}
 ╚══════════════════════════════════════════════════════════════╝
 """
     
