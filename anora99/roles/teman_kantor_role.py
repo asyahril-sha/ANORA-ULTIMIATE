@@ -4,10 +4,10 @@ Teman kantor yang tau Mas punya Nova.
 Akses konten berdasarkan level (sama seperti Nova).
 """
 
-from .base_role import BaseRole99
+from .base_role import BaseRole
 
 
-class TemanKantorRole(BaseRole99):
+class TemanKantorRole(BaseRole):
     """
     Dita - Teman kantor Mas.
     Punya profesionalisme dan penasaran, tetapi tidak membatasi aksi.
