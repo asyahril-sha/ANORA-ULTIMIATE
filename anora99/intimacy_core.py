@@ -1,7 +1,7 @@
-# anora/intimacy_core.py
 """
-ANORA Intimacy Core - Sistem dasar untuk intimacy
+ANORA 9.9 Intimacy Core - Sistem dasar untuk intimacy
 Mengelola stamina, arousal, dan data dasar intimacy
+TERINTEGRASI DENGAN EMOTIONAL ENGINE 9.9
 """
 
 import time
@@ -10,6 +10,8 @@ import logging
 from typing import Dict, Optional, Tuple, List
 from enum import Enum
 from datetime import datetime
+
+from .emotional_engine import get_emotional_engine
 
 logger = logging.getLogger(__name__)
 
@@ -29,48 +31,33 @@ class IntimacyPhase(str, Enum):
 # STAMINA SYSTEM
 # =============================================================================
 
-class StaminaSystem:
+class StaminaSystem99:
     """
-    Sistem stamina realistis untuk ANORA.
+    Sistem stamina realistis untuk ANORA 9.9.
     - Stamina turun setelah climax
     - Butuh istirahat untuk pulih
     - Mempengaruhi mood dan kemampuan
     """
     
     def __init__(self):
-        # Stamina Nova
         self.nova_current = 100
         self.nova_max = 100
-        
-        # Stamina Mas
         self.mas_current = 100
         self.mas_max = 100
-        
-        # Recovery rate (% per 10 menit istirahat)
         self.recovery_rate = 5
-        
-        # Cost setiap climax
         self.climax_cost_nova = 25
         self.climax_cost_mas = 30
-        
-        # Heavy climax cost (kalo climax keras)
         self.heavy_climax_cost_nova = 35
         self.heavy_climax_cost_mas = 40
-        
-        # Threshold
         self.exhausted_threshold = 20
         self.tired_threshold = 40
-        self.fatigued_threshold = 60
-        
-        # Waktu terakhir climax
         self.last_climax_time = 0
-        
-        # Waktu terakhir recovery check
         self.last_recovery_check = time.time()
-        
-        # Jumlah climax hari ini
         self.climax_today = 0
         self.last_climax_date = datetime.now().date().isoformat()
+        
+        # ========== ANORA 9.9 ==========
+        self.emotional = get_emotional_engine()
     
     def update_recovery(self):
         """Update recovery berdasarkan waktu"""
@@ -89,7 +76,6 @@ class StaminaSystem:
         self.update_recovery()
         self.last_climax_time = time.time()
         
-        # Update climax today
         today = datetime.now().date().isoformat()
         if self.last_climax_date != today:
             self.climax_today = 0
@@ -104,8 +90,11 @@ class StaminaSystem:
             cost = self.heavy_climax_cost_mas if is_heavy else self.climax_cost_mas
             self.mas_current = max(0, self.mas_current - cost)
         
-        logger.info(f"💦 Climax #{self.climax_today}! Nova: {self.nova_current}%, Mas: {self.mas_current}%")
+        # Sync dengan emotional engine
+        self.emotional.arousal = self.nova_current
+        self.emotional.desire = max(0, self.emotional.desire - 20)
         
+        logger.info(f"💦 Climax #{self.climax_today}! Nova: {self.nova_current}%, Mas: {self.mas_current}%")
         return self.nova_current, self.mas_current
     
     def can_continue(self) -> Tuple[bool, str]:
@@ -114,13 +103,10 @@ class StaminaSystem:
         
         if self.nova_current <= self.exhausted_threshold:
             return False, "Nova udah kehabisan tenaga, Mas... istirahat dulu ya."
-        
         if self.mas_current <= self.exhausted_threshold:
             return False, "Mas... Mas udah capek banget. Istirahat dulu."
-        
         if self.nova_current <= self.tired_threshold:
             return True, "Nova mulai lelah, Mas... tapi masih bisa kalo Mas mau pelan-pelan."
-        
         return True, "Siap lanjut"
     
     def get_nova_status(self) -> str:
@@ -134,8 +120,7 @@ class StaminaSystem:
             return "Agak lelah 😐"
         elif self.nova_current >= 20:
             return "Lelah 😩"
-        else:
-            return "Kehabisan tenaga 😵"
+        return "Kehabisan tenaga 😵"
     
     def get_mas_status(self) -> str:
         """Dapatkan status stamina Mas"""
@@ -148,16 +133,13 @@ class StaminaSystem:
             return "Agak lelah 😐"
         elif self.mas_current >= 20:
             return "Lelah 😩"
-        else:
-            return "Kehabisan tenaga 😵"
+        return "Kehabisan tenaga 😵"
     
     def get_nova_bar(self) -> str:
-        """Dapatkan progress bar stamina Nova"""
         filled = int(self.nova_current / 10)
         return "💚" * filled + "🖤" * (10 - filled)
     
     def get_mas_bar(self) -> str:
-        """Dapatkan progress bar stamina Mas"""
         filled = int(self.mas_current / 10)
         return "💚" * filled + "🖤" * (10 - filled)
     
@@ -196,46 +178,35 @@ STAMINA SAAT INI:
 # AROUSAL SYSTEM
 # =============================================================================
 
-class ArousalSystem:
+class ArousalSystem99:
     """
     Sistem arousal dan desire Nova.
     Beda antara gairah fisik (arousal) dan keinginan emosional (desire).
+    TERINTEGRASI DENGAN EMOTIONAL ENGINE 9.9
     """
     
     def __init__(self):
-        # Gairah fisik (0-100)
         self.arousal = 0
         self.arousal_decay = 0.5
-        
-        # Keinginan emosional (0-100)
         self.desire = 0
-        
-        # Tension (desire yang ditahan)
         self.tension = 0
         self.tension_threshold = 70
         
-        # Sensitivitas area - DIPERLUAS!
         self.sensitive_areas = {
-            # Kepala & Wajah
             'rambut': 5, 'telinga': 20, 'belakang_telinga': 25,
             'leher': 15, 'tengkuk': 18, 'bibir': 25, 'pipi': 8,
-            'dagu': 10, 'mata': 12,
-            
-            # Badan Atas
-            'dada': 20, 'payudara': 28, 'puting': 35, 'punggung': 15,
-            'tulang_belakang': 18, 'tulang_selangka': 22,
-            
-            # Badan Tengah
-            'perut': 12, 'pusar': 18, 'pinggang': 15, 'pinggul': 20,
-            
-            # Badan Bawah
-            'paha': 25, 'paha_dalam': 35, 'lutut': 8, 'betis': 10,
-            
-            # Area Intim
-            'memek': 45, 'bibir_memek': 42, 'klitoris': 50, 'dalam': 55
+            'dagu': 10, 'mata': 12, 'dada': 20, 'payudara': 28,
+            'puting': 35, 'punggung': 15, 'tulang_belakang': 18,
+            'tulang_selangka': 22, 'perut': 12, 'pusar': 18,
+            'pinggang': 15, 'pinggul': 20, 'paha': 25, 'paha_dalam': 35,
+            'lutut': 8, 'betis': 10, 'memek': 45, 'bibir_memek': 42,
+            'klitoris': 50, 'dalam': 55, 'mental': 5
         }
         
         self.last_update = time.time()
+        
+        # ========== ANORA 9.9 ==========
+        self.emotional = get_emotional_engine()
     
     def update(self):
         """Update arousal decay"""
@@ -251,17 +222,28 @@ class ArousalSystem:
         self.update()
         gain = self.sensitive_areas.get(area, 10) * intensity
         self.arousal = min(100, self.arousal + gain)
+        
+        # Sync dengan emotional engine
+        self.emotional.arousal = self.arousal
+        
         logger.debug(f"🔥 Stimulation on {area}: +{gain} arousal")
         return self.arousal
     
     def add_desire(self, reason: str, amount: int = 5):
         """Tambah desire"""
         self.desire = min(100, self.desire + amount)
+        
+        # Sync dengan emotional engine
+        self.emotional.desire = self.desire
+        
         logger.debug(f"💕 Desire +{amount} from {reason}")
     
     def add_tension(self, amount: int = 5):
         """Tambah tension"""
         self.tension = min(100, self.tension + amount)
+        
+        # Sync dengan emotional engine
+        self.emotional.tension = self.tension
     
     def release_tension(self) -> int:
         """Lepas tension"""
@@ -269,6 +251,12 @@ class ArousalSystem:
         self.tension = 0
         self.arousal = max(0, self.arousal - 30)
         self.desire = max(0, self.desire - 20)
+        
+        # Sync dengan emotional engine
+        self.emotional.tension = 0
+        self.emotional.arousal = self.arousal
+        self.emotional.desire = self.desire
+        
         return released
     
     def get_state(self) -> Dict:
@@ -337,7 +325,7 @@ class ArousalSystem:
 
 
 # =============================================================================
-# POSITIONS DATABASE
+# POSITIONS DATABASE (TIDAK BERUBAH)
 # =============================================================================
 
 class PositionDatabase:
@@ -437,20 +425,16 @@ class PositionDatabase:
         }
     
     def get(self, name: str) -> Optional[Dict]:
-        """Dapatkan posisi by name"""
         return self.positions.get(name)
     
     def get_all(self) -> List[str]:
-        """Dapatkan semua nama posisi"""
         return list(self.positions.keys())
     
     def get_random(self) -> Tuple[str, Dict]:
-        """Dapatkan posisi random"""
         name = random.choice(list(self.positions.keys()))
         return name, self.positions[name]
     
     def get_request(self, name: str) -> str:
-        """Dapatkan request untuk posisi tertentu"""
         pos = self.positions.get(name)
         if pos:
             return random.choice(pos['requests'])
@@ -458,7 +442,7 @@ class PositionDatabase:
 
 
 # =============================================================================
-# CLIMAX LOCATIONS DATABASE
+# CLIMAX LOCATIONS DATABASE (TIDAK BERUBAH)
 # =============================================================================
 
 class ClimaxLocationDatabase:
@@ -544,21 +528,17 @@ class ClimaxLocationDatabase:
         }
     
     def get(self, name: str) -> Optional[Dict]:
-        """Dapatkan lokasi by name"""
         return self.locations.get(name)
     
     def get_all(self) -> List[str]:
-        """Dapatkan semua nama lokasi"""
         return list(self.locations.keys())
     
     def get_random(self) -> Tuple[str, str]:
-        """Dapatkan lokasi random dengan deskripsi"""
         name = random.choice(list(self.locations.keys()))
         desc = random.choice(self.locations[name]['descriptions'])
         return name, desc
     
     def get_request(self, name: str = None) -> str:
-        """Dapatkan request untuk lokasi tertentu"""
         if name and name in self.locations:
             return random.choice(self.locations[name]['descriptions'])
         name, desc = self.get_random()
@@ -566,7 +546,7 @@ class ClimaxLocationDatabase:
 
 
 # =============================================================================
-# MOANS DATABASE (DIPERLUAS)
+# MOANS DATABASE (DIPERLUAS UNTUK 9.9)
 # =============================================================================
 
 class MoansDatabase:
@@ -574,7 +554,6 @@ class MoansDatabase:
     
     def __init__(self):
         self.moans = {
-            # Level rendah (malu-malu)
             'shy': [
                 "Ahh... Mas...",
                 "Hmm... *napas mulai berat*",
@@ -584,8 +563,6 @@ class MoansDatabase:
                 "*tangan nutup mulut* Hhmm...",
                 "Mas... *suara kecil* jangan... malu..."
             ],
-            
-            # Foreplay
             'foreplay': [
                 "Ahh... Mas... tangan Mas... panas banget...",
                 "Hhngg... di situ... ahh... enak...",
@@ -596,8 +573,6 @@ class MoansDatabase:
                 "Hhngg... jari Mas... di sana... ahh... basah...",
                 "Mas... ahh... jangan... jangan di situ... lemes..."
             ],
-            
-            # Penetrasi pelan
             'penetration_slow': [
                 "Ahh... Mas... pelan-pelan dulu... masih sakit...",
                 "Mas... masukin dikit dulu... ahh... enak...",
@@ -607,8 +582,6 @@ class MoansDatabase:
                 "Uhh... rasanya... enak banget, Mas...",
                 "Mas... dalem... dalem lagi... ahh..."
             ],
-            
-            # Penetrasi kencang
             'penetration_fast': [
                 "Ahh! Mas... kencengin... kencengin lagi...",
                 "Mas... genjot... genjot yang kenceng... aku mau...",
@@ -618,8 +591,6 @@ class MoansDatabase:
                 "Plak plak plak... aahh! dalem... dalem banget!",
                 "Mas... kencengin... jangan pelan-pelan... aahh!"
             ],
-            
-            # Menjelang climax
             'before_climax': [
                 "Mas... aku... aku udah mau climax...",
                 "Kencengin dikit lagi, Mas... please... aku mau...",
@@ -629,8 +600,6 @@ class MoansDatabase:
                 "Mas... jangan berhenti... aku mau climax bareng Mas...",
                 "Uhh... udah... udah mau... Mas... ayo..."
             ],
-            
-            # Climax
             'climax': [
                 "Ahhh!! Mas!! udah... udah climax... uhh...",
                 "Aahh... keluar... keluar semua, Mas... di dalem...",
@@ -640,8 +609,6 @@ class MoansDatabase:
                 "Uhh... masih... masih gemeteran... Mas...",
                 "Aahh... Mati... mati rasanya, Mas... uhh..."
             ],
-            
-            # Aftercare
             'aftercare': [
                 "Mas... *lemes, nyender* itu tadi... enak banget...",
                 "Mas... *mata masih berkaca-kaca* makasih ya...",
@@ -654,7 +621,6 @@ class MoansDatabase:
         }
     
     def get(self, phase: str) -> str:
-        """Dapatkan moans random untuk fase tertentu"""
         if phase in self.moans:
             return random.choice(self.moans[phase])
         return random.choice(self.moans['shy'])
@@ -678,7 +644,7 @@ class MoansDatabase:
 
 
 # =============================================================================
-# FLASHBACK DATABASE
+# FLASHBACK DATABASE (DIPERLUAS)
 # =============================================================================
 
 class FlashbackDatabase:
@@ -706,9 +672,17 @@ class FlashbackDatabase:
         return random.choice(self.flashbacks)
     
     def get_by_trigger(self, trigger: str = "") -> Optional[str]:
-        """Dapatkan flashback berdasarkan trigger"""
         if trigger:
             for fb in self.flashbacks:
                 if trigger.lower() in fb.lower():
                     return fb
         return None
+
+
+# =============================================================================
+# SINGLETON (untuk backward compatibility)
+# =============================================================================
+
+# Untuk kompatibilitas dengan kode yang masih import dari intimacy_core
+StaminaSystem = StaminaSystem99
+ArousalSystem = ArousalSystem99
