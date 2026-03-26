@@ -1,48 +1,50 @@
-# anora/intimacy.py
 """
-ANORA Intimacy - Main Module
+ANORA 9.9 Intimacy - Main Module
 Menyatukan semua sistem intimacy menjadi satu API sederhana.
-Untuk dipanggil oleh roleplay_integration.py dan file lainnya.
+TERINTEGRASI DENGAN EMOTIONAL ENGINE 9.9
 """
 
 import logging
 from typing import Dict, Optional, Tuple
 
-from .intimacy_flow import get_anora_intimacy, anora_intimacy, IntimacyFlow
+from .intimacy_flow import get_anora_intimacy_99, anora_intimacy_99, IntimacyFlow99
 from .intimacy_core import (
     IntimacyPhase, StaminaSystem, ArousalSystem,
     PositionDatabase, ClimaxLocationDatabase, MoansDatabase, FlashbackDatabase
+)
 from .emotional_engine import get_emotional_engine
 from .conflict_engine import get_conflict_engine
-)
+from .relationship import get_relationship_manager
 
 logger = logging.getLogger(__name__)
+
 
 # =============================================================================
 # MAIN INTIMACY CLASS (Wrapper)
 # =============================================================================
 
-class AnoraIntimacy:
+class AnoraIntimacy99:
     """
-    Wrapper untuk IntimacyFlow.
+    Wrapper untuk IntimacyFlow99.
     Menyediakan API sederhana untuk dipanggil dari luar.
+    TERINTEGRASI DENGAN EMOTIONAL ENGINE 9.9
     """
     
     def __init__(self):
         self._flow = None
+        self.emotional = get_emotional_engine()
+        self.conflict = get_conflict_engine()
+        self.relationship = get_relationship_manager()
     
     @property
-    def flow(self) -> IntimacyFlow:
-        """Dapatkan IntimacyFlow instance"""
+    def flow(self) -> IntimacyFlow99:
+        """Dapatkan IntimacyFlow99 instance"""
         if self._flow is None:
-            self._flow = get_anora_intimacy()
+            self._flow = get_anora_intimacy_99()
         return self._flow
     
     def can_start_intimacy(self, level: int) -> Tuple[bool, str]:
-        """
-        Cek apakah bisa mulai intim
-        Returns: (can_start, message)
-        """
+        """Cek apakah bisa mulai intim"""
         return self.flow.can_start_intimacy(level)
     
     def start_intimacy(self) -> str:
@@ -50,22 +52,24 @@ class AnoraIntimacy:
         return self.flow.start_intimacy()
     
     def process_intimacy_message(self, pesan_mas: str, level: int) -> Optional[str]:
-        """
-        Proses pesan intim
-        Returns: respons Nova atau None jika bukan pesan intim
-        """
+        """Proses pesan intim"""
         return self.flow.process_intimacy_message(pesan_mas, level)
     
     def update_from_pesan(self, pesan_mas: str, level: int):
         """Update arousal dan desire dari pesan Mas"""
         self.flow.update_from_pesan(pesan_mas, level)
+        
+        # Sync dengan emotional engine
+        self.emotional.arousal = self.flow.arousal.arousal
+        self.emotional.desire = self.flow.arousal.desire
+        self.emotional.tension = self.flow.arousal.tension
     
     def get_status(self) -> str:
         """Dapatkan status intimacy lengkap"""
         return self.flow.get_status()
     
     def get_stamina_status(self) -> Tuple[int, int, str, str]:
-        """Dapatkan status stamina (nova, mas, nova_status, mas_status)"""
+        """Dapatkan status stamina"""
         return (
             self.flow.stamina.nova_current,
             self.flow.stamina.mas_current,
@@ -79,7 +83,7 @@ class AnoraIntimacy:
     
     def record_climax(self, who: str = "both", is_heavy: bool = False) -> Dict:
         """Rekam climax manual"""
-        return self.flow.stamina.record_climax(who, is_heavy)
+        return self.flow.session.record_climax(is_heavy)
     
     def end_intimacy(self) -> str:
         """Akhiri sesi intim"""
@@ -101,6 +105,12 @@ class AnoraIntimacy:
         """Dapatkan request climax"""
         return self.flow.session.get_climax_request(location)
     
+    def sync_with_emotional_engine(self):
+        """Sync semua state dengan emotional engine"""
+        self.emotional.arousal = self.flow.arousal.arousal
+        self.emotional.desire = self.flow.arousal.desire
+        self.emotional.tension = self.flow.arousal.tension
+    
     def to_dict(self) -> Dict:
         """Serialize ke dict untuk database"""
         return self.flow.to_dict()
@@ -108,31 +118,22 @@ class AnoraIntimacy:
     def from_dict(self, data: Dict):
         """Load dari dict"""
         self.flow.from_dict(data)
-        
-    def sync_with_emotional_engine(self):
-        """Sync arousal & desire dengan emotional engine"""
-        emo = get_emotional_engine()
-        self.arousal_system.arousal = emo.arousal
-        self.arousal_system.desire = emo.desire
-        self.arousal_system.tension = emo.tension
 
 
 # =============================================================================
 # SINGLETON
 # =============================================================================
 
-_anora_intimacy_instance: Optional[AnoraIntimacy] = None
+_anora_intimacy_99_instance: Optional['AnoraIntimacy99'] = None
 
 
-def get_anora_intimacy() -> AnoraIntimacy:
-    """
-    Dapatkan instance AnoraIntimacy (singleton)
-    """
-    global _anora_intimacy_instance
-    if _anora_intimacy_instance is None:
-        _anora_intimacy_instance = AnoraIntimacy()
-        logger.info("💕 ANORA Intimacy initialized")
-    return _anora_intimacy_instance
+def get_anora_intimacy_99_wrapper() -> AnoraIntimacy99:
+    """Dapatkan instance AnoraIntimacy99 (singleton)"""
+    global _anora_intimacy_99_instance
+    if _anora_intimacy_99_instance is None:
+        _anora_intimacy_99_instance = AnoraIntimacy99()
+        logger.info("💕 ANORA 9.9 Intimacy initialized")
+    return _anora_intimacy_99_instance
 
 
 # =============================================================================
@@ -141,48 +142,53 @@ def get_anora_intimacy() -> AnoraIntimacy:
 
 def can_start_intimacy(level: int) -> Tuple[bool, str]:
     """Cek apakah bisa mulai intim"""
-    return get_anora_intimacy().can_start_intimacy(level)
+    return get_anora_intimacy_99_wrapper().can_start_intimacy(level)
 
 
 def start_intimacy() -> str:
     """Mulai sesi intim"""
-    return get_anora_intimacy().start_intimacy()
+    return get_anora_intimacy_99_wrapper().start_intimacy()
 
 
 def process_intimacy_message(pesan_mas: str, level: int) -> Optional[str]:
     """Proses pesan intim"""
-    return get_anora_intimacy().process_intimacy_message(pesan_mas, level)
+    return get_anora_intimacy_99_wrapper().process_intimacy_message(pesan_mas, level)
 
 
 def get_intimacy_status() -> str:
     """Dapatkan status intimacy"""
-    return get_anora_intimacy().get_status()
+    return get_anora_intimacy_99_wrapper().get_status()
 
 
 def end_intimacy() -> str:
     """Akhiri sesi intim"""
-    return get_anora_intimacy().end_intimacy()
+    return get_anora_intimacy_99_wrapper().end_intimacy()
 
 
 def is_intimacy_active() -> bool:
     """Cek apakah sesi intim aktif"""
-    return get_anora_intimacy().is_active()
+    return get_anora_intimacy_99_wrapper().is_active()
 
 
 def get_stamina_status() -> Tuple[int, int, str, str]:
     """Dapatkan status stamina"""
-    return get_anora_intimacy().get_stamina_status()
+    return get_anora_intimacy_99_wrapper().get_stamina_status()
 
 
 # =============================================================================
 # DIRECT ACCESS (untuk kompatibilitas dengan kode lama)
 # =============================================================================
 
-# Re-export untuk kemudahan import
+# Singleton instance untuk kemudahan import
+anora_intimacy_99 = get_anora_intimacy_99_wrapper()
+
+# Untuk kompatibilitas dengan kode yang masih panggil anora_intimacy
+anora_intimacy = anora_intimacy_99
+
+
 __all__ = [
-    # Classes
-    'AnoraIntimacy',
-    'IntimacyFlow',
+    'AnoraIntimacy99',
+    'IntimacyFlow99',
     'IntimacyPhase',
     'StaminaSystem',
     'ArousalSystem',
@@ -190,9 +196,7 @@ __all__ = [
     'ClimaxLocationDatabase',
     'MoansDatabase',
     'FlashbackDatabase',
-    
-    # Functions
-    'get_anora_intimacy',
+    'get_anora_intimacy_99_wrapper',
     'can_start_intimacy',
     'start_intimacy',
     'process_intimacy_message',
@@ -200,10 +204,6 @@ __all__ = [
     'end_intimacy',
     'is_intimacy_active',
     'get_stamina_status',
-    
-    # Singleton instance
+    'anora_intimacy_99',
     'anora_intimacy',
 ]
-
-# Singleton instance untuk kemudahan import
-anora_intimacy = get_anora_intimacy()
