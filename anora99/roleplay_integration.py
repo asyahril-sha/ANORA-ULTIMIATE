@@ -332,7 +332,7 @@ class AnoraRoleplay:
             await persistent.set_state('stamina', json.dumps(self.stamina.to_dict()))
             await persistent.set_state('intimacy', json.dumps(self.intimacy.to_dict()))
             await persistent.set_state('emotional', json.dumps(self.emotional.to_dict()))
-            await persistent.set_state('relationship', json.dumps(self.relationship.to_dict()))
+            await persistent.save_relationship_state(self.relationship)
             await persistent.set_state('conflict', json.dumps(self.conflict.to_dict()))
             await persistent.save_current_state(self.brain)
             
