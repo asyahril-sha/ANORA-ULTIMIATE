@@ -9,14 +9,14 @@ from .ipar_role import IparRole
 from .teman_kantor_role import TemanKantorRole
 from .pelakor_role import PelakorRole
 from .istri_orang_role import IstriOrangRole
-from .role_manager import RoleManager99, get_role_manager_99
+from .role_manager import RoleManager, get_role_manager
 
 __all__ = [
-    'BaseRole99',
+    'BaseRole',
     'IparRole',
     'TemanKantorRole',
     'PelakorRole',
     'IstriOrangRole',
-    'RoleManager99',
-    'get_role_manager_99',
+    'RoleManager',
+    'get_role_manager',
 ]
