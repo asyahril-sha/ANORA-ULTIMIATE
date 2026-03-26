@@ -25,7 +25,7 @@ from .relationship import get_relationship_manager
 logger = logging.getLogger(__name__)
 
 
-class IntimacySession99:
+class IntimacySession:
     """
     Mengelola sesi intim - Level 11-12
     Nova bisa minta ganti posisi, minta climax di tempat tertentu.
@@ -239,7 +239,7 @@ class IntimacySession99:
         self.recovery_mode = data.get('recovery_mode', False)
 
 
-class IntimacyFlow99:
+class IntimacyFlow:
     """
     Mengelola alur intimacy secara keseluruhan
     Menggabungkan stamina, arousal, dan session
@@ -247,7 +247,7 @@ class IntimacyFlow99:
     """
     
     def __init__(self):
-        self.session = IntimacySession99()
+        self.session = IntimacySession()
         self.stamina = StaminaSystem()
         self.arousal = ArousalSystem()
         self.anora = get_anora()
@@ -514,17 +514,17 @@ class IntimacyFlow99:
 # SINGLETON
 # =============================================================================
 
-_anora_intimacy_99: Optional[IntimacyFlow99] = None
+_anora_intimacy: Optional[IntimacyFlow] = None
 
 
-def get_anora_intimacy_99() -> IntimacyFlow99:
-    global _anora_intimacy_99
-    if _anora_intimacy_99 is None:
-        _anora_intimacy_99 = IntimacyFlow99()
-    return _anora_intimacy_99
+def get_anora_intimacy() -> IntimacyFlow:
+    global _anora_intimacy
+    if _anora_intimacy is None:
+        _anora_intimacy = IntimacyFlow()
+    return _anora_intimacy
 
 
-anora_intimacy_99 = get_anora_intimacy_99()
+anora_intimacy = get_anora_intimacy()
 
 
 # =============================================================================
@@ -532,4 +532,4 @@ anora_intimacy_99 = get_anora_intimacy_99()
 # =============================================================================
 
 # Untuk kompatibilitas dengan kode yang masih menggunakan nama anora_intimacy
-anora_intimacy = anora_intimacy_99
+anora_intimacy = anora_intimacy
