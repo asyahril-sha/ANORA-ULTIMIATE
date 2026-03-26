@@ -4,7 +4,7 @@
     "buildCommand": "pip install -r requirements.txt && python database_migrate.py"
   },
   "deploy": {
-    "startCommand": "python anora99/reset_anora_db.py",
+    "startCommand": "python anora99/anora_deploy.py",
     "healthcheckPath": "/health",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
