@@ -26,15 +26,6 @@ logger = logging.getLogger(__name__)
 class PersistentMemory:
     """
     Memory permanen Nova 9.9. Disimpan ke database.
-    - Timeline: semua kejadian
-    - Short-term memory: sliding window 50 kejadian
-    - Long-term memory: kebiasaan, momen, janji
-    - State: lokasi, pakaian, perasaan terakhir
-    - Conversation: semua percakapan
-    - COMPLETE STATE: semua aspek Mas, Nova, dan bersama
-    - EMOTIONAL STATE: semua emosi dari emotional engine
-    - CONFLICT STATE: semua konflik dari conflict engine
-    - RELATIONSHIP STATE: semua fase dari relationship manager
     """
     
     def __init__(self, db_path: Path = Path("data/anora99.db")):
@@ -356,25 +347,28 @@ class PersistentMemory:
     
     async def save_emotional_state(self, emotional_engine):
         """Simpan emotional state ke database"""
-        await self._conn.execute('''
-            INSERT OR REPLACE INTO emotional_state_99 
-            (id, sayang, rindu, trust, mood, desire, arousal, tension, cemburu, kecewa, updated_at)
-            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            emotional_engine.sayang,
-            emotional_engine.rindu,
-            emotional_engine.trust,
-            emotional_engine.mood,
-            emotional_engine.desire,
-            emotional_engine.arousal,
-            emotional_engine.tension,
-            emotional_engine.cemburu,
-            emotional_engine.kecewa,
-            time.time()
-        ))
-        await self._conn.commit()
-        logger.debug("💾 Emotional state saved")
-    
+        try:
+            await self._conn.execute('''
+                INSERT OR REPLACE INTO emotional_state_99 
+                (id, sayang, rindu, trust, mood, desire, arousal, tension, cemburu, kecewa, updated_at)
+                VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                emotional_engine.sayang,
+                emotional_engine.rindu,
+                emotional_engine.trust,
+                emotional_engine.mood,
+                emotional_engine.desire,
+                emotional_engine.arousal,
+                emotional_engine.tension,
+                emotional_engine.cemburu,
+                emotional_engine.kecewa,
+                time.time()
+            ))
+            await self._conn.commit()
+            logger.debug("💾 Emotional state saved")
+        except Exception as e:
+            logger.error(f"Error saving emotional state: {e}")
+
     async def load_emotional_state(self, emotional_engine) -> bool:
         """Load emotional state dari database"""
         try:
@@ -382,7 +376,6 @@ class PersistentMemory:
                 "SELECT sayang, rindu, trust, mood, desire, arousal, tension, cemburu, kecewa FROM emotional_state_99 WHERE id = 1"
             )
             row = await cursor.fetchone()
-            
             if row:
                 emotional_engine.sayang = row[0]
                 emotional_engine.rindu = row[1]
@@ -401,7 +394,7 @@ class PersistentMemory:
             return False
     
     # =========================================================================
-    # RELATIONSHIP STATE METHODS (FIXED)
+    # RELATIONSHIP STATE METHODS
     # =========================================================================
     
     async def save_relationship_state(self, relationship_manager):
@@ -410,7 +403,7 @@ class PersistentMemory:
             # Konversi milestones ke dictionary simple (hanya boolean)
             milestones_dict = {}
             for name, milestone in relationship_manager.milestones.items():
-                milestones_dict[name] = milestone.achieved  # ambil boolean-nya saja
+                milestones_dict[name] = milestone.achieved
             
             await self._conn.execute(
                 """INSERT OR REPLACE INTO relationship_state_99 
