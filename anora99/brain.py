@@ -406,7 +406,7 @@ LOCATION_DATA = {
 # ANORA BRAIN 9.9 - MAIN CLASS
 # =============================================================================
 
-class AnoraBrain99:
+class AnoraBrain:
     """
     Otak Nova 9.9 - Full integration dengan:
     - Emotional Engine
@@ -952,14 +952,14 @@ UNLOCK (FASE {phase.value.upper()}):
 # SINGLETON
 # =============================================================================
 
-_anora_brain_99: Optional['AnoraBrain99'] = None
+_anora_brain: Optional['AnoraBrain'] = None
 
 
-def get_anora_brain_99() -> AnoraBrain99:
-    global _anora_brain_99
-    if _anora_brain_99 is None:
-        _anora_brain_99 = AnoraBrain99()
-    return _anora_brain_99
+def get_anora_brain() -> AnoraBrain:
+    global _anora_brain
+    if _anora_brain is None:
+        _anora_brain = AnoraBrain()
+    return _anora_brain
 
 
-anora_brain_99 = get_anora_brain_99()
+anora_brain = get_anora_brain()
