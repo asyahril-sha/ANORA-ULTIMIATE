@@ -66,7 +66,7 @@ class LocationData:
     tips: str
 
 
-class AnoraLocationManager99:
+class AnoraLocationManager:
     """
     Manager lokasi ANORA 9.9.
     Nova bisa diajak ke mana aja.
@@ -488,14 +488,14 @@ TIPS: {loc.tips}
 # SINGLETON
 # =============================================================================
 
-_anora_location_99 = None
+_anora_location = None
 
 
-def get_anora_location_99() -> AnoraLocationManager99:
-    global _anora_location_99
-    if _anora_location_99 is None:
-        _anora_location_99 = AnoraLocationManager99()
-    return _anora_location_99
+def get_anora_location() -> AnoraLocationManager:
+    global _anora_location
+    if _anora_location is None:
+        _anora_location = AnoraLocationManager()
+    return _anora_location
 
 
-anora_location_99 = get_anora_location_99()
+anora_location = get_anora_location()
