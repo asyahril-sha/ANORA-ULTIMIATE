@@ -354,31 +354,26 @@ class PersistentMemory:
     # EMOTIONAL STATE METHODS
     # =========================================================================
     
-    async def save_relationship_state(self, relationship_manager):
-        """Simpan relationship state ke database"""
-        try:
-            # Konversi milestones ke dictionary simple (hanya boolean)
-            milestones_dict = {}
-            for name, milestone in relationship_manager.milestones.items():
-                milestones_dict[name] = milestone.achieved
-        
-            # TAMBAHKAN LOGGING UNTUK DEBUG
-            logger.debug(f"Saving milestones: {milestones_dict}")
-        
-            await self._conn.execute(
-                """INSERT OR REPLACE INTO relationship_state_99 
-                   (id, phase, level, interaction_count, milestones, updated_at) 
-                   VALUES (1, ?, ?, ?, ?, ?)""",
-                (relationship_manager.phase.value, 
-                 relationship_manager.level,
-                 relationship_manager.interaction_count,
-                 json.dumps(milestones_dict),
-                 time.time())
-            )
-            await self._conn.commit()
-            logger.debug("💾 Relationship state saved")
-        except Exception as e:
-            logger.error(f"Error saving relationship state: {e}")
+    async def save_emotional_state(self, emotional_engine):
+        """Simpan emotional state ke database"""
+        await self._conn.execute('''
+            INSERT OR REPLACE INTO emotional_state_99 
+            (id, sayang, rindu, trust, mood, desire, arousal, tension, cemburu, kecewa, updated_at)
+            VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            emotional_engine.sayang,
+            emotional_engine.rindu,
+            emotional_engine.trust,
+            emotional_engine.mood,
+            emotional_engine.desire,
+            emotional_engine.arousal,
+            emotional_engine.tension,
+            emotional_engine.cemburu,
+            emotional_engine.kecewa,
+            time.time()
+        ))
+        await self._conn.commit()
+        logger.debug("💾 Emotional state saved")
     
     async def load_emotional_state(self, emotional_engine) -> bool:
         """Load emotional state dari database"""
