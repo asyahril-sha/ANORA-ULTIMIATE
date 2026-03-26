@@ -403,13 +403,19 @@ class PersistentMemory:
     async def save_relationship_state(self, relationship_manager):
         """Simpan relationship state ke database"""
         try:
+            # Konversi milestones ke dictionary simple
+            milestones_dict = {}
+            for name, milestone in relationship_manager.milestones.items():
+                milestones_dict[name] = milestone.achieved  # ambil boolean-nya saja
+        
             await self._conn.execute(
-                """INSERT OR REPLACE INTO relationship_state 
+                """INSERT OR REPLACE INTO relationship_state_99 
                    (id, phase, level, interaction_count, milestones, updated_at) 
                    VALUES (1, ?, ?, ?, ?, ?)""",
-                (relationship_manager.phase.value, relationship_manager.level,
+                (relationship_manager.phase.value, 
+                 relationship_manager.level,
                  relationship_manager.interaction_count,
-                 json.dumps({k: v.achieved for k, v in relationship_manager.milestones.items()}),
+                 json.dumps(milestones_dict),  # ← pastikan json.dumps
                  time.time())
             )
             await self._conn.commit()
