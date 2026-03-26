@@ -803,19 +803,20 @@ Kirim **/batal** buat balik ke mode chat.
         loc = self.brain.get_location_data()
         complete = self.brain.complete_state
     
-        # SAYANG - dari brain (update dari interaksi)
+        # Sayang - dari brain
         bar_sayang = "💜" * int(self.brain.feelings.sayang / 10) + "🖤" * (10 - int(self.brain.feelings.sayang / 10))
     
         # Stamina bars
         nova_bar = self.stamina.get_nova_bar()
         mas_bar = self.stamina.get_mas_bar()
     
-        # AROUSAL & DESIRE - dari ai.arousal (update dari analisis situasi)
+        # ========== AMBIL DARI AI.AROUSAL ==========
         arousal_state = self.ai.arousal.get_state()
         arousal = arousal_state['arousal']
         desire = arousal_state['desire']
         tension = arousal_state['tension']
     
+        # Buat bar untuk arousal dan desire
         arousal_bar = "🔥" * int(arousal / 10) + "⚪" * (10 - int(arousal / 10))
         desire_bar = "🔥" * int(desire / 10) + "⚪" * (10 - int(desire / 10))
         
@@ -843,8 +844,8 @@ Kirim **/batal** buat balik ke mode chat.
             nova_clothing.append("telanjang dada")
         
         intimacy_status = ""
-        if self.intimacy.is_active:
-            intimacy_status = f"""
+    if self.intimacy.is_active:
+        intimacy_status = f"""
 🔥 **SESI INTIM AKTIF**
 - Durasi: {int(time.time() - self.intimacy.start_time)//60} menit
 - Climax: {self.intimacy.climax_count}x
@@ -869,9 +870,9 @@ Kirim **/batal** buat balik ke mode chat.
 ╠══════════════════════════════════════════════════════════════╣
 ║ 💕 PERASAAN NOVA:                                            ║
 ║    Sayang: {bar_sayang} {self.brain.feelings.sayang:.0f}%    ║
-║    Desire: {bar_desire} {self.brain.feelings.desire:.0f}%    ║
+║    Desire: {desire_bar} {desire:.0f}%                        ║
 ║    Rindu: {self.brain.feelings.rindu:.0f}%                   ║
-║    Arousal: {arousal_bar} {arousal_state['arousal']:.0f}%    ║
+║    Arousal: {arousal_bar} {arousal:.0f}%                     ║
 ╠══════════════════════════════════════════════════════════════╣
 ║ 💪 STAMINA:                                                  ║
 ║    Nova: {nova_bar} {self.stamina.nova_current}% ({self.stamina.get_nova_status()})
